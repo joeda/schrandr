@@ -3,6 +3,8 @@
 
 #define PID_FILE "/tmp/schrandr.pid"
 
+namespace schrandr {
+
 class PIDFileHolder {
 public:
 	PIDFileHolder(unsigned int pid);
@@ -10,5 +12,6 @@ public:
 private:
 	std::fstream pid_file_;
 };
+}
 
 #endif
