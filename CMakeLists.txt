@@ -1,3 +1,5 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.1.0)
 project (schrandr CXX)
 add_executable(schrandr schrandr.cpp)
+set_property(TARGET schrandr PROPERTY CXX_STANDARD 11)
+set_property(TARGET schrandr PROPERTY CXX_STANDARD_REQUIRED ON)

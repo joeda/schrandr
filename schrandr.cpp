@@ -15,12 +15,20 @@
 #include <signal.h>                                         // sigaction
 #include "schrandr.h"
 
+#include <X11/Xlib.h>
+#include <X11/extensions/Xrandr.h>
+
+#define OCNE(X) ((XRROutputChangeNotifyEvent*)X)
+#define BUFFER_SIZE 128
+
 namespace schrandr {
     
     std::unique_ptr<PIDFileHolder> pid_file_holder;
     std::atomic<int> interruption(0);
     unsigned int loop_duration(500000);
     std::atomic<bool> interactive(false);
+    char *con_actions[] = { "connected", "disconnected", "unknown" };
+    
     
     PIDFileHolder::PIDFileHolder(unsigned int pid)
     : pid_file_(PID_FILE, std::ios_base::in)
@@ -76,6 +84,11 @@ int main(int argc, char **argv)
     using namespace schrandr;
     
     struct sigaction handler;
+    int index;
+    int c;
+    XEvent ev;
+//     Display *dpy;
+//     char buf[BUFFER_SIZE];
     
     std::set_terminate(handle_uncaught);
     
@@ -92,11 +105,6 @@ int main(int argc, char **argv)
         || sigaction(SIGSEGV, &handler, NULL)) {
         return 1;
         }
-    int aflag = 0;
-    int bflag = 0;
-    char *cvalue = NULL;
-    int index;
-    int c;
     
     opterr = 0;
     while ((c = getopt (argc, argv, "i")) != -1) {
