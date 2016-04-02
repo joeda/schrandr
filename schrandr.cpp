@@ -121,7 +121,10 @@ int main(int argc, char **argv)
     for (index = optind; index < argc; index++)
         printf ("Non-option argument %s\n", argv[index]);
     
-    pid_t pID = fork();
+    pid_t pID = 0;
+    if (!interactive) {
+        pID = fork();
+    }
     if (pID == 0)                                           // child
     {
         // Code only executed by child process
