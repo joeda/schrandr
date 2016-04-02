@@ -104,8 +104,8 @@ int main(void)
             usleep(loop_duration);
             if (interruption > 0) {
                 break;
-              }
-          }
+            }
+        }
         return EXIT_SUCCESS;
     }
     else if (pID < 0)                                       // failed to fork
