@@ -20,6 +20,7 @@ namespace schrandr {
     std::unique_ptr<PIDFileHolder> pid_file_holder;
     std::atomic<int> interruption(0);
     unsigned int loop_duration(500000);
+    std::atomic<bool> interactive(false);
     
     PIDFileHolder::PIDFileHolder(unsigned int pid)
     : pid_file_(PID_FILE, std::ios_base::in)
@@ -91,29 +92,21 @@ int main(int argc, char **argv)
         || sigaction(SIGSEGV, &handler, NULL)) {
         return 1;
         }
-        int aflag = 0;
+    int aflag = 0;
     int bflag = 0;
     char *cvalue = NULL;
     int index;
     int c;
     
     opterr = 0;
-    while ((c = getopt (argc, argv, "abc:")) != -1) {
+    while ((c = getopt (argc, argv, "i")) != -1) {
         switch (c)
         {
-            case 'a':
-                aflag = 1;
-                break;
-            case 'b':
-                bflag = 1;
-                break;
-            case 'c':
-                cvalue = optarg;
+            case 'i':
+                interactive = true;
                 break;
             case '?':
-                if (optopt == 'c')
-                    fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-                else if (isprint (optopt))
+                if (isprint (optopt))
                     fprintf (stderr, "Unknown option `-%c'.\n", optopt);
                 else
                     fprintf (stderr,
@@ -124,9 +117,7 @@ int main(int argc, char **argv)
                 abort ();
         }
     }
-    printf ("aflag = %d, bflag = %d, cvalue = %s\n",
-            aflag, bflag, cvalue);
-    
+    printf("interactive mode? %s\n", interactive ? "true" : "false");
     for (index = optind; index < argc; index++)
         printf ("Non-option argument %s\n", argv[index]);
     
