@@ -93,6 +93,10 @@ namespace schrandr {
     {
         exit(EXIT_FAILURE);
     }
+    
+    int predicate_event(Display *display, XEvent *ev, XPointer arg) {
+        return true;
+    }
 }
 
 int main(int argc, char **argv)
@@ -105,6 +109,7 @@ int main(int argc, char **argv)
     XEvent ev;
     Display *dpy;
     char buf[BUFFER_SIZE];
+    XPointer dummy;
     
     std::set_terminate(handle_uncaught);
     
@@ -165,13 +170,17 @@ int main(int argc, char **argv)
         XSync(dpy, False);
         std::cout << "Hello #2" << std::endl;
         XSetIOErrorHandler((XIOErrorHandler) error_handler);
+        
+        int (*predicate)(Display*, XEvent*, XPointer);
+        predicate = &predicate_event;
+        
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;
             usleep(loop_duration);
             if (interruption > 0) {
                 break;
             }
-            if (!XNextEvent(dpy, &ev)) {
+            if (XCheckIfEvent(dpy, &ev, predicate, dummy)) {
                 std::cout << "Hello #3" << std::endl;
                 XRRScreenResources *resources = XRRGetScreenResources(OCNE(&ev)->display,
                                                                       OCNE(&ev)->window);
