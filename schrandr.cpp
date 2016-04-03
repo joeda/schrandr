@@ -9,6 +9,7 @@
 #include <sys/file.h>                                       // flock
 #include <memory>                                           // unique_ptr
 #include <unistd.h>
+#include <stdarg.h> //va_list
 #include <atomic>                                           // aborting
 
 #include <stdlib.h>
@@ -54,7 +55,8 @@ namespace schrandr {
         std::cout << "Unlinking worked apparently." << std::endl;
     }
     
-    void sig_handler(int signum) {
+    void sig_handler(int signum)
+    {
         switch(signum) {
             case SIGHUP:
             case SIGINT:
@@ -77,6 +79,20 @@ namespace schrandr {
     {
         std::cout << "Panic!" << std::endl;
     }
+    
+    static void xerror(const char *format, ...)
+    {
+        va_list args;
+        va_start(args, format);
+        vfprintf(stderr, format, args);
+        va_end(args);
+        exit(EXIT_FAILURE);
+    }
+    
+    static int error_handler(void)
+    {
+        exit(EXIT_FAILURE);
+    }
 }
 
 int main(int argc, char **argv)
@@ -87,8 +103,8 @@ int main(int argc, char **argv)
     int index;
     int c;
     XEvent ev;
-//     Display *dpy;
-//     char buf[BUFFER_SIZE];
+    Display *dpy;
+    char buf[BUFFER_SIZE];
     
     std::set_terminate(handle_uncaught);
     
@@ -105,8 +121,8 @@ int main(int argc, char **argv)
         || sigaction(SIGSEGV, &handler, NULL)) {
         return 1;
         }
-    
-    opterr = 0;
+        
+        opterr = 0;
     while ((c = getopt (argc, argv, "i")) != -1) {
         switch (c)
         {
@@ -137,13 +153,62 @@ int main(int argc, char **argv)
     {
         // Code only executed by child process
         std::cout << "I'm the child process!" << std::endl;
+        
         setsid();
         pid_file_holder.reset(new PIDFileHolder(getpid()));
+        
+        if ((dpy = XOpenDisplay(NULL)) == NULL)
+            xerror("Cannot open display\n");
+        std::cout << "Hello #0" << std::endl;
+        XRRSelectInput(dpy, DefaultRootWindow(dpy), RROutputChangeNotifyMask);
+        std::cout << "Hello #1" << std::endl;
+        XSync(dpy, False);
+        std::cout << "Hello #2" << std::endl;
+        XSetIOErrorHandler((XIOErrorHandler) error_handler);
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;
             usleep(loop_duration);
             if (interruption > 0) {
                 break;
+            }
+            if (!XNextEvent(dpy, &ev)) {
+                std::cout << "Hello #3" << std::endl;
+                XRRScreenResources *resources = XRRGetScreenResources(OCNE(&ev)->display,
+                                                                      OCNE(&ev)->window);
+                std::cout << "Hello #4" << std::endl;
+                if (resources == NULL) {
+                    fprintf(stderr, "Could not get screen resources\n");
+                    continue;
+                }
+                std::cout << "Hello #5" << std::endl;
+                XRROutputInfo *info = XRRGetOutputInfo(OCNE(&ev)->display, resources,
+                                                       OCNE(&ev)->output);
+                if (info == NULL) {
+                    XRRFreeScreenResources(resources);
+                    fprintf(stderr, "Could not get output info\n");
+                    continue;
+                }
+                
+                snprintf(buf, BUFFER_SIZE, "%s %s", info->name,
+                         con_actions[info->connection]);
+                printf("Event: %s %s\n", info->name,
+                       con_actions[info->connection]);
+                printf("Time: %lu\n", info->timestamp);
+                if (info->crtc == 0) {
+                    printf("Size: %lumm x %lumm\n", info->mm_width, info->mm_height);
+                }
+                else {
+                    printf("CRTC: %lu\n", info->crtc);
+                    XRRCrtcInfo *crtc = XRRGetCrtcInfo(dpy, resources, info->crtc);
+                    if (crtc != NULL) {
+                        printf("Size: %dx%d\n", crtc->width, crtc->height);
+                        XRRFreeCrtcInfo(crtc);
+                    }
+                }
+                XRRFreeScreenResources(resources);
+                XRRFreeOutputInfo(info);
+            } else {
+                std::cout << "No XNextEvent" << std::endl;
             }
         }
         return EXIT_SUCCESS;
