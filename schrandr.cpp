@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <stdarg.h> //va_list
 #include <atomic>                                           // aborting
+#include <vector>
 
 #include <stdlib.h>
 #include <signal.h>                                         // sigaction
@@ -19,6 +20,8 @@
 
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
+
+#include <xcb/xcb.h>
 
 #define OCNE(X) ((XRROutputChangeNotifyEvent*)X)
 #define BUFFER_SIZE 128
@@ -98,6 +101,25 @@ namespace schrandr {
     int predicate_event(Display *display, XEvent *ev, XPointer arg) {
         return true;
     }
+    
+    std::vector<std::string> get_monitor_setup(xcb_connection_t *xcb_conn) {
+        std::vector<std::string> monitors;
+        const xcb_setup_t *setup;
+        xcb_screen_iterator_t iter;
+        xcb_screen_t *screen;
+        
+        setup = xcb_get_setup(xcb_conn);
+        iter = xcb_setup_roots_iterator(setup);
+        screen = iter.data;
+        std::string screen_res = "Screen X Res: ";
+        screen_res += std::to_string(screen->width_in_pixels);
+        screen_res += " Screen Y Res: ";
+        screen_res += std::to_string(screen->height_in_pixels);
+        monitors.push_back(screen_res);
+        
+        return monitors;
+    }
+    
 }
 
 int main(int argc, char **argv)
@@ -113,6 +135,7 @@ int main(int argc, char **argv)
     XPointer dummy;
     Logger logger;
     char log_buf[BUFFER_SIZE];
+    xcb_connection_t *xcb_connection;
     
     std::set_terminate(handle_uncaught);
     
@@ -166,6 +189,13 @@ int main(int argc, char **argv)
         pid_file_holder.reset(new PIDFileHolder(getpid()));
         logger.enable_syslog();
         logger.log("Hello!");
+        xcb_connection = xcb_connect (NULL, NULL);
+        
+        std::vector<std::string> sample_data;
+        sample_data.push_back("Bananas");
+        sample_data.push_back("Apples");
+        logger.log(sample_data);
+        logger.log(get_monitor_setup(xcb_connection));
         
         if ((dpy = XOpenDisplay(NULL)) == NULL)
             xerror("Cannot open display\n");
