@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <signal.h>                                         // sigaction
 #include "schrandr.h"
+#include "logging.h"
 
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
@@ -110,6 +111,8 @@ int main(int argc, char **argv)
     Display *dpy;
     char buf[BUFFER_SIZE];
     XPointer dummy;
+    Logger logger;
+    char log_buf[BUFFER_SIZE];
     
     std::set_terminate(handle_uncaught);
     
@@ -161,6 +164,8 @@ int main(int argc, char **argv)
         
         setsid();
         pid_file_holder.reset(new PIDFileHolder(getpid()));
+        logger.enable_syslog();
+        logger.log("Hello!");
         
         if ((dpy = XOpenDisplay(NULL)) == NULL)
             xerror("Cannot open display\n");
@@ -202,7 +207,12 @@ int main(int argc, char **argv)
                          con_actions[info->connection]);
                 printf("Event: %s %s\n", info->name,
                        con_actions[info->connection]);
+                snprintf(log_buf, BUFFER_SIZE, "Event: %s %s\n", info->name, 
+                           con_actions[info->connection]);
+                logger.log(log_buf);
                 printf("Time: %lu\n", info->timestamp);
+                snprintf(log_buf, BUFFER_SIZE, "Time: %lu\n", info->timestamp);
+                logger.log(log_buf);
                 if (info->crtc == 0) {
                     printf("Size: %lumm x %lumm\n", info->mm_width, info->mm_height);
                 }

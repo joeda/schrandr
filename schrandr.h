@@ -1,6 +1,9 @@
 #ifndef SCHRANDR_H_
 #define SCHRANDR_H_
 
+#include <iostream>
+#include <fstream>
+
 #define PID_FILE "/tmp/schrandr.pid"
 
 namespace schrandr {

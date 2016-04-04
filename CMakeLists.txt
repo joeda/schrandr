@@ -7,9 +7,11 @@ find_package(X11)
         message(FATAL_ERROR "Failed to find X11")
     endif(NOT X11_FOUND)
 
+add_library(logging logging.cpp)
 add_executable(schrandr schrandr.cpp)
+
 
 set_property(TARGET schrandr PROPERTY CXX_STANDARD 11)
 set_property(TARGET schrandr PROPERTY CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(schrandr ${X11_LIBRARIES} ${X11_Xrandr_LIB})
+target_link_libraries(schrandr ${X11_LIBRARIES} ${X11_Xrandr_LIB} logging)
