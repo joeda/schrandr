@@ -120,6 +120,59 @@ namespace schrandr {
         return monitors;
     }
     
+    bool has_randr_15(Display *dpy)
+    {
+        int major, minor;
+        int event_base, error_base;
+        if (!XRRQueryExtension (dpy, &event_base, &error_base) ||
+        !XRRQueryVersion (dpy, &major, &minor))
+        {
+            fprintf (stderr, "RandR extension missing\n");
+            exit (EXIT_FAILURE);
+        }
+        if (major > 1 || (major == 1 && minor >= 5))
+            return true;
+        else
+            return false;
+    }
+    
+    XRRMonitorInfo* get_monitors(Display *dpy, Window root)
+    {
+        XRRMonitorInfo *m;
+        int n;
+        m = XRRGetMonitors(dpy, root, false, &n);
+        if (n == -1) {
+            fprintf(stderr, "get monitors failed\n");
+            exit(EXIT_FAILURE);
+        }
+        return m;
+    }
+    
+    std::vector<std::string> monitor_info_to_string
+    (XRRMonitorInfo *monitor_info)
+    {
+        std::vector<std::string> info;
+        info.push_back("---- Monitor Info ----");
+        
+        std::string x = "x: ";
+        x += std::to_string(monitor_info->x);
+        info.push_back(x);
+        std::string y = "y: ";
+        y += std::to_string(monitor_info->y);
+        info.push_back(y);
+        std::string noutput = "noutput: ";
+        noutput += std::to_string(monitor_info->noutput);
+        info.push_back(noutput);
+        std::string width = "width: ";
+        width += std::to_string(monitor_info->width);
+        info.push_back(width);
+        std::string height = "height: ";
+        height += std::to_string(monitor_info->height);
+        info.push_back(height);
+        
+        return info;
+    }
+    
 }
 
 int main(int argc, char **argv)
@@ -136,6 +189,9 @@ int main(int argc, char **argv)
     Logger logger;
     char log_buf[BUFFER_SIZE];
     xcb_connection_t *xcb_connection;
+    static Window root;
+    int screen;
+    XRRMonitorInfo *monitor_info;
     
     std::set_terminate(handle_uncaught);
     
@@ -205,6 +261,14 @@ int main(int argc, char **argv)
         XSync(dpy, False);
         std::cout << "Hello #2" << std::endl;
         XSetIOErrorHandler((XIOErrorHandler) error_handler);
+        screen = DefaultScreen (dpy);
+        root = RootWindow (dpy, screen);
+        if (has_randr_15(dpy)) {
+            monitor_info = get_monitors(dpy, root);
+            std::vector<std::string> minfo =
+                monitor_info_to_string(monitor_info);
+            logger.log(minfo);
+        }
         
         int (*predicate)(Display*, XEvent*, XPointer);
         predicate = &predicate_event;
