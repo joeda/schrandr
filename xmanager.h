@@ -28,12 +28,9 @@ namespace schrandr {
         XEvent ev_;
         XPointer dummy_;
         std::vector<std::string> con_actions;
-        
-        int (*predicate_)(Display*, XEvent*, XPointer);
-        
+                
         int error_handler_(void);
         bool has_randr_15_(Display *dpy_);
-        int predicate_event_(Display *display, XEvent *ev, XPointer arg);
         XRRMonitorInfo* get_monitors_(Display *dpy, Window root);
         std::vector<std::string> monitor_info_to_string_(XRRMonitorInfo *monitor_info);
     };

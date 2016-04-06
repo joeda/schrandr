@@ -25,7 +25,7 @@ namespace schrandr {
             std::vector<std::string> minfo =
                 monitor_info_to_string_(monitor_info);
         }
-        predicate_ = &predicate_event_;
+        
         con_actions.push_back("connected");
         con_actions.push_back("disconnected");
         con_actions.push_back("unknown");
@@ -59,7 +59,7 @@ namespace schrandr {
     }
     
     
-    int XManager::predicate_event_(Display *display, XEvent *ev, XPointer arg) {
+    int predicate_event_(Display *display, XEvent *ev, XPointer arg) {
         return true;
     }
     
@@ -131,6 +131,9 @@ namespace schrandr {
         std::vector<std::string> events;
         char log_buf[BUFFER_SIZE];
         char buf[BUFFER_SIZE];
+        
+        int (*predicate_)(Display*, XEvent*, XPointer);
+        predicate_ = &predicate_event_;
 
         if (XCheckIfEvent(dpy_, &ev_, predicate_, dummy_)) {
             XRRScreenResources *resources = XRRGetScreenResources(OCNE(&ev_)->display,
