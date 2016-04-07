@@ -10,6 +10,8 @@
 
 #include <xcb/xcb.h>
 
+#include "monitor_setup.h"
+
 namespace schrandr {
     
     class XManager {
@@ -19,6 +21,7 @@ namespace schrandr {
         std::vector<std::string> get_X_events();
         std::vector<std::string> get_monitor_info();
         std::vector<std::string> get_monitor_setup();
+        XRandrMonitorInfo get_monitors();
 
     private:
         xcb_connection_t *xcb_connection_;
@@ -28,7 +31,9 @@ namespace schrandr {
         XEvent ev_;
         XPointer dummy_;
         std::vector<std::string> con_actions;
-                
+        
+        int (*predicate_)(Display*, XEvent*, XPointer);
+        
         int error_handler_(void);
         bool has_randr_15_(Display *dpy_);
         XRRMonitorInfo* get_monitors_(Display *dpy, Window root);

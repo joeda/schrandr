@@ -94,6 +94,18 @@ namespace schrandr {
         return m;
     }
     
+    XRandrMonitorInfo XManager::get_monitors()
+    {
+        XRandrMonitorInfo ret;
+        ret.minfo = XRRGetMonitors(dpy_, root_, false, &ret.n_monitors);
+        if (ret.n_monitors == -1) {
+            fprintf(stderr, "get monitors failed\n");
+            exit(EXIT_FAILURE);
+        }
+        
+        return ret;
+    }
+    
     std::vector<std::string> XManager::monitor_info_to_string_
     (XRRMonitorInfo *monitor_info)
     {
@@ -115,6 +127,7 @@ namespace schrandr {
         std::string height = "height: ";
         height += std::to_string(monitor_info->height);
         info.push_back(height);
+        info.push_back("---- End Monitor Info ----");
         
         return info;
     }

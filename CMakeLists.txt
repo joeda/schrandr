@@ -13,10 +13,11 @@ include(FindXCB.cmake)
 
 add_library(logging logging.cpp)
 add_library(xmanager xmanager.cpp)
+add_library(monitor_setup monitor_setup.cpp)
 add_executable(schrandr schrandr.cpp)
 
 
-set_property(TARGET schrandr logging xmanager PROPERTY CXX_STANDARD 11)
-set_property(TARGET schrandr logging xmanager PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET schrandr logging xmanager monitor_setup PROPERTY CXX_STANDARD 11)
+set_property(TARGET schrandr logging xmanager monitor_setup PROPERTY CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(schrandr ${X11_LIBRARIES} ${X11_Xrandr_LIB} logging ${XCB_LIBRARIES} xmanager)
+target_link_libraries(schrandr ${X11_LIBRARIES} ${X11_Xrandr_LIB} logging ${XCB_LIBRARIES} xmanager monitor_setup)
