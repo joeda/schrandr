@@ -15,14 +15,23 @@ namespace schrandr {
         int n_monitors;
     };
     
-    struct Monitor
-    {
-        unsigned int x_res;
-        unsigned int y_res;
-        unsigned int x_on_screen;
-        unsigned int y_on_screen;
-        std::string edid;
-        bool active;
+    class Monitor {
+    public:
+        Monitor(
+            unsigned int xr,
+            unsigned int yr,
+            unsigned int xos,
+            unsigned int yos
+        );
+        std::vector<std::string> to_string()const;
+    
+    private:    
+        unsigned int x_res_;
+        unsigned int y_res_;
+        unsigned int x_on_screen_;
+        unsigned int y_on_screen_;
+        std::string edid_;
+        bool active_;
     };
     
     class MonitorSetup {
