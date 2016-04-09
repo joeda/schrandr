@@ -186,6 +186,10 @@ namespace schrandr {
         xcb_randr_list_output_properties_cookie_t output_properties_cookie;
         xcb_randr_list_output_properties_reply_t *output_properties_reply;
         xcb_atom_t *output_properties_atoms;
+        int n_atoms;
+        xcb_get_atom_name_cookie_t atom_name_cookie;
+        xcb_get_atom_name_reply_t *atom_name_reply;
+        char *atom_name;
         
         for (int output = 0; output < n_outputs; output++) {
             printf("Not at output %d\n", output);
@@ -205,6 +209,20 @@ namespace schrandr {
                 xcb_connection_, outputs[output]);
             output_properties_reply = xcb_randr_list_output_properties_reply (
                 xcb_connection_, output_properties_cookie, NULL);
+            output_properties_atoms = xcb_randr_list_output_properties_atoms(
+                output_properties_reply);
+            n_atoms = xcb_randr_list_output_properties_atoms_length(
+                output_properties_reply);
+            printf("Number of atoms: %d\n", n_atoms);
+            
+            for (int atom = 0; atom < n_atoms; atom++) {
+                atom_name_cookie = xcb_get_atom_name(
+                    xcb_connection_, output_properties_atoms[atom]);
+                atom_name_reply = xcb_get_atom_name_reply (
+                    xcb_connection_, atom_name_cookie, NULL);
+                atom_name = xcb_get_atom_name_name(atom_name_reply);
+                printf("Atom Name: %s\n", atom_name);
+            }
         
 // //         for(int i = 0; i < n_atoms; i++) {
 // //             if(atoms[i]) {
