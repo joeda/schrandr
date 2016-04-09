@@ -167,87 +167,95 @@ namespace schrandr {
         screenResReply = xcb_randr_get_screen_resources_current_reply(xcb_connection_,
                      screenResCookie, 0);
         
-        xcb_randr_output_t *first_output;
+        xcb_randr_output_t *outputs;
+        int n_outputs = 0;
         
         if(screenResReply) {
-            int n_outputs = 
+            n_outputs = 
                 xcb_randr_get_screen_resources_current_outputs_length(
                     screenResReply);
-            first_output = 
+            outputs = 
                 xcb_randr_get_screen_resources_current_outputs(screenResReply);
         } else
             return NULL;
+                
+        char *output_name;
         
-
-        xcb_randr_list_output_properties_cookie_t props_cookie = 
-            xcb_randr_list_output_properties(xcb_connection_, *first_output);
+        printf("Number of outputs: %d\n", n_outputs);
         
-        xcb_randr_list_output_properties_reply_t * props_reply ;
-        xcb_generic_error_t **dummy_generic_error;
+        xcb_randr_list_output_properties_cookie_t output_properties_cookie;
+        xcb_randr_list_output_properties_reply_t *output_properties_reply;
+        xcb_atom_t *output_properties_atoms;
         
-        props_reply = xcb_randr_list_output_properties_reply(
-            xcb_connection_, props_cookie, dummy_generic_error);
+        for (int output = 0; output < n_outputs; output++) {
+            printf("Not at output %d\n", output);
+            xcb_randr_get_output_info_cookie_t output_info_cookie = xcb_randr_get_output_info(
+                xcb_connection_,
+                outputs[output],
+                XCB_CURRENT_TIME);
+            xcb_randr_get_output_info_reply_t *output_info =
+                xcb_randr_get_output_info_reply(xcb_connection_,
+                                                output_info_cookie,
+                                                NULL);
+            output_name = strndup((char *) xcb_randr_get_output_info_name(output_info),
+                                  xcb_randr_get_output_info_name_length(output_info));
+            printf("Output Name: %s\n", output_name);
+            
+            output_properties_cookie = xcb_randr_list_output_properties(
+                xcb_connection_, outputs[output]);
+            output_properties_reply = xcb_randr_list_output_properties_reply (
+                xcb_connection_, output_properties_cookie, NULL);
         
-        xcb_atom_t *atoms = xcb_randr_list_output_properties_atoms(props_reply);
-        int n_atoms = 
-            xcb_randr_list_output_properties_atoms_length(props_reply);
-        
-        xcb_get_atom_name_cookie_t atom_name_cookie;
-        xcb_get_atom_name_reply_t *atom_name_reply;
-        char *atom_name;
-        int atom_name_length;
-        
-//         for(int i = 0; i < n_atoms; i++) {
-//             if(atoms[i]) {
-//                 atom_name_cookie = xcb_get_atom_name(xcb_connection_, atoms[i]);
-//                 atom_name_reply = xcb_get_atom_name_reply(
-//                     xcb_connection_, atom_name_cookie, dummy_generic_error);
-//                 atom_name = xcb_get_atom_name_name (atom_name_reply);
-//                 atom_name_length =
-//                     xcb_get_atom_name_name_length(atom_name_reply);
-//                 printf("Atom Name Length: %d\n", atom_name_length);
-//                 printf("Atom Name: ");
-//                 std::cout << std::string(atom_name, atom_name_length);
-//                 printf("\n");
-//             }
-//         }
-        
-        unsigned char *ret = NULL;
-        xcb_randr_get_output_property_cookie_t cookie;
-        xcb_randr_get_output_property_reply_t *reply;
-        uint8_t pending = 0;
-        
-        std::cout << "Debug #1" << std::endl;
-        cookie =
-            xcb_randr_get_output_property(xcb_connection_, //conn
-                                                    *first_output, //output
-                                                    atoms[0], //property
-                                                    XCB_GET_PROPERTY_TYPE_ANY, //type
-                                                    0, //long_offset
-                                                    100, //long_length
-                                                    0, //delete
-                                                    0); //pending
-        std::cout << "Debug #2" << std::endl;
-        
-        reply =
-            xcb_randr_get_output_property_reply(xcb_connection_, cookie, NULL);
-        if (reply)
-            {
-                std::cout << "Debug #4" << std::endl;
-                if ((reply->type == XCB_ATOM_INTEGER) && (reply->format == 8))
-                {
-                    std::cout << "Debug #5" << std::endl;
-                    ret = (unsigned char*)malloc(reply->num_items * sizeof(unsigned char));
-                    {
-                        std::cout << "Debug #6" << std::endl;
-                        memcpy(ret, xcb_randr_get_output_property_data(reply),
-                                (reply->num_items * sizeof(unsigned char)));
-                    }
-                }
-                free(reply);
-            }
-        printf("%u", ret);
-        std::cout << "Debug #3" << std::endl;
+// //         for(int i = 0; i < n_atoms; i++) {
+// //             if(atoms[i]) {
+// //                 atom_name_cookie = xcb_get_atom_name(xcb_connection_, atoms[i]);
+// //                 atom_name_reply = xcb_get_atom_name_reply(
+// //                     xcb_connection_, atom_name_cookie, dummy_generic_error);
+// //                 atom_name = xcb_get_atom_name_name (atom_name_reply);
+// //                 atom_name_length =
+// //                     xcb_get_atom_name_name_length(atom_name_reply);
+// //                 printf("Atom Name Length: %d\n", atom_name_length);
+// //                 printf("Atom Name: ");
+// //                 std::cout << std::string(atom_name, atom_name_length);
+// //                 printf("\n");
+// //             }
+// //         }
+//             
+//             unsigned char *ret = NULL;
+//             xcb_randr_get_output_property_cookie_t cookie;
+//             xcb_randr_get_output_property_reply_t *reply;
+//             uint8_t pending = 0;
+//             
+//             std::cout << "Debug #1" << std::endl;
+//             cookie =
+//                 xcb_randr_get_output_property(xcb_connection_, //conn
+//                                                         outputs[output], //output
+//                                                         atoms[0], //property
+//                                                         XCB_GET_PROPERTY_TYPE_ANY, //type
+//                                                         0, //long_offset
+//                                                         100, //long_length
+//                                                         0, //delete
+//                                                         0); //pending
+//             std::cout << "Debug #2" << std::endl;
+//             
+//             reply =
+//                 xcb_randr_get_output_property_reply(xcb_connection_, cookie, NULL);
+//             if (reply)
+//                 {
+//                     std::cout << "Debug #4" << std::endl;
+//                     if ((reply->type == XCB_ATOM_INTEGER) && (reply->format == 8))
+//                     {
+//                         std::cout << "Debug #5" << std::endl;
+//                         ret = (unsigned char*)malloc(reply->num_items * sizeof(unsigned char));
+//                         std::cout << "Debug #6" << std::endl;
+//                         memcpy(ret, xcb_randr_get_output_property_data(reply),
+//                                 (reply->num_items * sizeof(unsigned char)));
+//                     }
+//                     free(reply);
+//                 }
+//             printf("%u", ret);
+//             std::cout << "Debug #3" << std::endl;
+        }
         
         return return_string;
     }

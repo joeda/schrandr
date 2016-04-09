@@ -165,7 +165,7 @@ int main(int argc, char **argv)
         monitor_setup.set_monitors(xmanager.get_monitors());
         logger.log(monitor_setup.print_setup());
         xmanager.get_edid();
-        std::cout << "Debug #6" << std::endl;
+        std::cout << "Debug #7" << std::endl;
         
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;
