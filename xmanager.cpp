@@ -4,6 +4,8 @@
 #include <string>
 #include <cstring>
 #include <stdlib.h>
+#include <inttypes.h>
+#include <iomanip>
 
 #include <xcb/randr.h>
 
@@ -183,13 +185,20 @@ namespace schrandr {
         
         printf("Number of outputs: %d\n", n_outputs);
         
+        //getting output properties atoms
         xcb_randr_list_output_properties_cookie_t output_properties_cookie;
         xcb_randr_list_output_properties_reply_t *output_properties_reply;
         xcb_atom_t *output_properties_atoms;
         int n_atoms;
+        //getting atom names
         xcb_get_atom_name_cookie_t atom_name_cookie;
         xcb_get_atom_name_reply_t *atom_name_reply;
         char *atom_name;
+        //getting atom content
+        xcb_randr_get_output_property_cookie_t property_cookie;
+        xcb_randr_get_output_property_reply_t *property_reply;
+        uint8_t *property_data;
+        int property_data_length;
         
         for (int output = 0; output < n_outputs; output++) {
             printf("Not at output %d\n", output);
@@ -213,7 +222,6 @@ namespace schrandr {
                 output_properties_reply);
             n_atoms = xcb_randr_list_output_properties_atoms_length(
                 output_properties_reply);
-            printf("Number of atoms: %d\n", n_atoms);
             
             for (int atom = 0; atom < n_atoms; atom++) {
                 atom_name_cookie = xcb_get_atom_name(
@@ -221,58 +229,31 @@ namespace schrandr {
                 atom_name_reply = xcb_get_atom_name_reply (
                     xcb_connection_, atom_name_cookie, NULL);
                 atom_name = xcb_get_atom_name_name(atom_name_reply);
-                printf("Atom Name: %s\n", atom_name);
+                
+                if (!strcmp(atom_name, "EDID")) {
+                    property_cookie = xcb_randr_get_output_property(
+                        xcb_connection_,
+                        outputs[output],
+                        output_properties_atoms[atom],
+                        XCB_GET_PROPERTY_TYPE_ANY,
+                        0,
+                        100,
+                        0,
+                        0);
+                    property_reply = xcb_randr_get_output_property_reply(
+                        xcb_connection_, property_cookie, NULL);
+                    property_data = xcb_randr_get_output_property_data(
+                        property_reply);
+                    property_data_length = 
+                        xcb_randr_get_output_property_data_length(
+                            property_reply);
+                    std::cout << "EDID: ";
+                    for (int i = 0; i < property_data_length; i++) {
+                        std::cout << std::setw(2) << std::setfill('0') << std::hex << (int) property_data[i];
+                    }
+                    std::cout << std::endl;
+                }
             }
-        
-// //         for(int i = 0; i < n_atoms; i++) {
-// //             if(atoms[i]) {
-// //                 atom_name_cookie = xcb_get_atom_name(xcb_connection_, atoms[i]);
-// //                 atom_name_reply = xcb_get_atom_name_reply(
-// //                     xcb_connection_, atom_name_cookie, dummy_generic_error);
-// //                 atom_name = xcb_get_atom_name_name (atom_name_reply);
-// //                 atom_name_length =
-// //                     xcb_get_atom_name_name_length(atom_name_reply);
-// //                 printf("Atom Name Length: %d\n", atom_name_length);
-// //                 printf("Atom Name: ");
-// //                 std::cout << std::string(atom_name, atom_name_length);
-// //                 printf("\n");
-// //             }
-// //         }
-//             
-//             unsigned char *ret = NULL;
-//             xcb_randr_get_output_property_cookie_t cookie;
-//             xcb_randr_get_output_property_reply_t *reply;
-//             uint8_t pending = 0;
-//             
-//             std::cout << "Debug #1" << std::endl;
-//             cookie =
-//                 xcb_randr_get_output_property(xcb_connection_, //conn
-//                                                         outputs[output], //output
-//                                                         atoms[0], //property
-//                                                         XCB_GET_PROPERTY_TYPE_ANY, //type
-//                                                         0, //long_offset
-//                                                         100, //long_length
-//                                                         0, //delete
-//                                                         0); //pending
-//             std::cout << "Debug #2" << std::endl;
-//             
-//             reply =
-//                 xcb_randr_get_output_property_reply(xcb_connection_, cookie, NULL);
-//             if (reply)
-//                 {
-//                     std::cout << "Debug #4" << std::endl;
-//                     if ((reply->type == XCB_ATOM_INTEGER) && (reply->format == 8))
-//                     {
-//                         std::cout << "Debug #5" << std::endl;
-//                         ret = (unsigned char*)malloc(reply->num_items * sizeof(unsigned char));
-//                         std::cout << "Debug #6" << std::endl;
-//                         memcpy(ret, xcb_randr_get_output_property_data(reply),
-//                                 (reply->num_items * sizeof(unsigned char)));
-//                     }
-//                     free(reply);
-//                 }
-//             printf("%u", ret);
-//             std::cout << "Debug #3" << std::endl;
         }
         
         return return_string;
