@@ -22,6 +22,7 @@ namespace schrandr {
         std::vector<std::string> get_monitor_info();
         std::vector<std::string> get_monitor_setup();
         XRandrMonitorInfo get_monitors();
+        std::string get_edid();
 
     private:
         xcb_connection_t *xcb_connection_;

@@ -80,7 +80,13 @@ namespace schrandr {
     
     void handle_uncaught()
     {
-        std::cout << "Panic!" << std::endl;
+        std::string err = std::strerror(errno);
+	try {
+            std::rethrow_exception(std::current_exception());
+	} catch (const std::exception &e) {
+            std::cerr << "Unhandled exception: " << typeid(e).name() << ": " << e.what() << "." << std::endl <<
+                "errno = " << err << "." << std::endl;
+        }
     }
 }
 
@@ -158,6 +164,8 @@ int main(int argc, char **argv)
         logger.log(xmanager.get_monitor_info());
         monitor_setup.set_monitors(xmanager.get_monitors());
         logger.log(monitor_setup.print_setup());
+        xmanager.get_edid();
+        std::cout << "Debug #6" << std::endl;
         
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;

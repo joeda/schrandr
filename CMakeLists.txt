@@ -6,7 +6,7 @@ find_package(X11)
         message(FATAL_ERROR "Failed to find X11")
     endif(NOT X11_FOUND)
 
-include(FindXCB.cmake)
+include(FindXCB_KDE.cmake)
     if(NOT XCB_FOUND)
         message(FATAL_ERROR "Failed to find XCB")
     endif(NOT XCB_FOUND)
