@@ -18,11 +18,8 @@ namespace schrandr {
     public:
         XManager();
         ~XManager();
+        std::vector<Monitor> get_monitors();
         std::vector<std::string> get_X_events();
-        std::vector<std::string> get_monitor_info();
-        std::vector<std::string> get_monitor_setup();
-        XRandrMonitorInfo get_monitors();
-        std::string get_edid();
 
     private:
         xcb_connection_t *xcb_connection_;
@@ -37,8 +34,6 @@ namespace schrandr {
         
         int error_handler_(void);
         bool has_randr_15_(Display *dpy_);
-        XRRMonitorInfo* get_monitors_(Display *dpy, Window root);
-        std::vector<std::string> monitor_info_to_string_(XRRMonitorInfo *monitor_info);
     };
 } 
 

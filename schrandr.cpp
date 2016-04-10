@@ -160,11 +160,11 @@ int main(int argc, char **argv)
         sample_data.push_back("Bananas");
         sample_data.push_back("Apples");
         logger.log(sample_data);
-        logger.log(xmanager.get_monitor_setup());
-        logger.log(xmanager.get_monitor_info());
         monitor_setup.set_monitors(xmanager.get_monitors());
-        logger.log(monitor_setup.print_setup());
-        xmanager.get_edid();
+        std::cout << "Debug B1" << std::endl;
+        std::vector<std::string> msges = monitor_setup.print_setup();
+        std::cout << "Debug B3" << std::endl;
+        logger.log(msges);
         std::cout << "Debug #7" << std::endl;
         
         while (true) {

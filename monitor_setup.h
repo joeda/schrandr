@@ -4,16 +4,9 @@
 #include <vector>
 #include <string>
 
-#include <X11/Xlib.h>
-#include <X11/extensions/Xrandr.h>
+#include "edid.h"
 
 namespace schrandr {
-    
-    struct XRandrMonitorInfo
-    {
-        XRRMonitorInfo* minfo;
-        int n_monitors;
-    };
     
     class Monitor {
     public:
@@ -21,7 +14,8 @@ namespace schrandr {
             unsigned int xr,
             unsigned int yr,
             unsigned int xos,
-            unsigned int yos
+            unsigned int yos,
+            Edid edid
         );
         std::vector<std::string> to_string()const;
     
@@ -30,7 +24,7 @@ namespace schrandr {
         unsigned int y_res_;
         unsigned int x_on_screen_;
         unsigned int y_on_screen_;
-        std::string edid_;
+        Edid edid_;
         bool active_;
     };
     
@@ -39,7 +33,7 @@ namespace schrandr {
         MonitorSetup();
         ~MonitorSetup();
         std::vector<std::string> print_setup();
-        void set_monitors(XRandrMonitorInfo m);
+        void set_monitors(std::vector<Monitor> m);
  
     private:
         std::vector<Monitor> monitors_;

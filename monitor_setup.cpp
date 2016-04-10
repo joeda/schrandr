@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "monitor_setup.h"
 
 namespace schrandr {
@@ -10,40 +12,31 @@ namespace schrandr {
         std::vector<std::string> ret;
         for(auto const& monitor: monitors_) {
             std::vector<std::string> moninfo = monitor.to_string();
+            std::cout << "This works" << std::endl;
             ret.push_back("Monitor X");
             ret.insert(ret.end(), moninfo.begin(), moninfo.end());
         }
-        
         return ret;
     }
     
-    void MonitorSetup::set_monitors(XRandrMonitorInfo m)
+    void MonitorSetup::set_monitors(std::vector<Monitor> m)
     {
         monitors_.clear();
-        if (m.n_monitors > 0) {
-            for (int i = 0; i < m.n_monitors; i++) {
-                Monitor mon_entry(
-                    m.minfo[i].width,
-                    m.minfo[i].height,
-                    m.minfo[i].x,
-                    m.minfo[i].y
-                        );
-                monitors_.push_back(mon_entry);
-            }
-        }
+        monitors_ = m;
     }
     
     Monitor::Monitor(
         unsigned int xr,
         unsigned int yr,
         unsigned int xos,
-        unsigned int yos
+        unsigned int yos,
+        Edid edid
     ) :
     x_res_(xr),
     y_res_(yr),
     x_on_screen_(xos),
     y_on_screen_(yos),
-    edid_("foo_EDID"),
+    edid_(edid),
     active_(true)
     {}
     
@@ -51,6 +44,9 @@ namespace schrandr {
     {
         std::vector<std::string> ret;
         ret.push_back("--------");
+        std::string edid = "\tEDID: ";
+        // this is bugged
+        edid += edid_.to_string();
         std::string xres = "\tX-Resolution: ";
         xres += std::to_string(x_res_);
         std::string yres = "\tY-Resolution: ";
@@ -60,11 +56,14 @@ namespace schrandr {
         std::string ypos = "\tY-Position on Screen: ";
         ypos += std::to_string(y_on_screen_);
         
+        ret.push_back(edid);
         ret.push_back(xres);
         ret.push_back(yres);
         ret.push_back(xpos);
         ret.push_back(ypos);
         ret.push_back("--------");
+        
+        std::cout << "Debug B4" << std::endl;
         
         return ret;
     }

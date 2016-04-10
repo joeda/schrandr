@@ -24,11 +24,6 @@ namespace schrandr {
         //XSetIOErrorHandler((XIOErrorHandler) error_handler_);
         screen_ = DefaultScreen (dpy_);
         root_ = RootWindow (dpy_, screen_);
-        if (has_randr_15_(dpy_)) {
-            XRRMonitorInfo* monitor_info = get_monitors_(dpy_, root_);
-            std::vector<std::string> minfo =
-                monitor_info_to_string_(monitor_info);
-        }
         
         con_actions.push_back("connected");
         con_actions.push_back("disconnected");
@@ -67,85 +62,9 @@ namespace schrandr {
         return true;
     }
     
-    std::vector<std::string> XManager::get_monitor_setup() {
-        std::vector<std::string> monitors;
-        const xcb_setup_t *setup;
-        xcb_screen_iterator_t iter;
-        xcb_screen_t *screen;
-        
-        setup = xcb_get_setup(xcb_connection_);
-        iter = xcb_setup_roots_iterator(setup);
-        screen = iter.data;
-        std::string screen_res = "Screen X Res: ";
-        screen_res += std::to_string(screen->width_in_pixels);
-        screen_res += " Screen Y Res: ";
-        screen_res += std::to_string(screen->height_in_pixels);
-        monitors.push_back(screen_res);
-        
-        return monitors;
-    }
-    
-    
-    XRRMonitorInfo* XManager::get_monitors_(Display *dpy, Window root)
+    std::vector<Monitor> XManager::get_monitors()
     {
-        XRRMonitorInfo *m;
-        int n;
-        m = XRRGetMonitors(dpy, root, false, &n);
-        if (n == -1) {
-            fprintf(stderr, "get monitors failed\n");
-            exit(EXIT_FAILURE);
-        }
-        return m;
-    }
-    
-    XRandrMonitorInfo XManager::get_monitors()
-    {
-        XRandrMonitorInfo ret;
-        ret.minfo = XRRGetMonitors(dpy_, root_, false, &ret.n_monitors);
-        if (ret.n_monitors == -1) {
-            fprintf(stderr, "get monitors failed\n");
-            exit(EXIT_FAILURE);
-        }
-        
-        return ret;
-    }
-    
-    std::vector<std::string> XManager::monitor_info_to_string_
-    (XRRMonitorInfo *monitor_info)
-    {
-        std::vector<std::string> info;
-        info.push_back("---- Monitor Info ----");
-        
-        std::string x = "x: ";
-        x += std::to_string(monitor_info->x);
-        info.push_back(x);
-        std::string y = "y: ";
-        y += std::to_string(monitor_info->y);
-        info.push_back(y);
-        std::string noutput = "noutput: ";
-        noutput += std::to_string(monitor_info->noutput);
-        info.push_back(noutput);
-        std::string width = "width: ";
-        width += std::to_string(monitor_info->width);
-        info.push_back(width);
-        std::string height = "height: ";
-        height += std::to_string(monitor_info->height);
-        info.push_back(height);
-        info.push_back("---- End Monitor Info ----");
-        
-        return info;
-    }
-    
-    std::vector<std::string> XManager::get_monitor_info()
-    {
-        XRRMonitorInfo* minf = get_monitors_(dpy_, root_);
-        std::vector<std::string> info = monitor_info_to_string_(minf);
-        return info;
-    }
-    
-    std::string XManager::get_edid()
-    {
-        std::string return_string = "";
+        std::vector<Monitor> monitors;
         //Get the first X screen
         xcb_screen_t* XFirstScreen = xcb_setup_roots_iterator(
                                xcb_get_setup(xcb_connection_)).data;
@@ -179,7 +98,7 @@ namespace schrandr {
             outputs = 
                 xcb_randr_get_screen_resources_current_outputs(screenResReply);
         } else
-            return NULL;
+            return monitors;
                 
         char *output_name;
         
@@ -198,7 +117,7 @@ namespace schrandr {
         xcb_randr_get_output_property_cookie_t property_cookie;
         xcb_randr_get_output_property_reply_t *property_reply;
         uint8_t *property_data;
-        int property_data_length;
+        size_t property_data_length;
         
         for (int output = 0; output < n_outputs; output++) {
             printf("Not at output %d\n", output);
@@ -252,11 +171,15 @@ namespace schrandr {
                         std::cout << std::setw(2) << std::setfill('0') << std::hex << (int) property_data[i];
                     }
                     std::cout << std::endl;
+                    
+                    monitors.push_back(Monitor(3,4,5,6, Edid(
+                        property_data, property_data_length
+                    )));
                 }
             }
         }
         
-        return return_string;
+        return monitors;
     }
     
     std::vector<std::string> XManager::get_X_events()
