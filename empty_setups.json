@@ -1,0 +1,29 @@
+{
+"setups":[
+{
+ "monitors": [
+    {
+    "EDID": "00ffffff0012341234a",
+    "xres": 1920,
+    "yres":1200
+    },
+    {
+      "EDID": "00ffffff0012341234b",
+      "xres":1680,
+      "yres":1050
+    }
+  ],
+ "screen":0 
+  },
+  {
+  "monitors":[
+    {
+      "EDID":"00ffffffff0012341234c",
+      "xres":1600,
+      "yres":900
+    }
+  ],
+  "screen":0
+  }
+]
+}
