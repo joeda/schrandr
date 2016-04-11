@@ -7,8 +7,6 @@
 #include <inttypes.h>
 #include <iomanip>
 
-#include <xcb/randr.h>
-
 #define OCNE(X) ((XRROutputChangeNotifyEvent*)X)
 #define BUFFER_SIZE 128
 
@@ -17,6 +15,9 @@ namespace schrandr {
     XManager::XManager()
     {
         xcb_connection_ = xcb_connect (NULL, NULL);
+        get_screens_raw_();
+        make_window_dummy_();
+        get_outputs_raw_();
         
 //         con_actions.push_back("connected");
 //         con_actions.push_back("disconnected");
@@ -55,47 +56,48 @@ namespace schrandr {
 //         return true;
 //     }
     
-    std::vector<Monitor> XManager::get_monitors()
+    void XManager::get_screens_raw_()
     {
-        std::vector<Monitor> monitors;
-        //Get the first X screen
-        xcb_screen_t* XFirstScreen = xcb_setup_roots_iterator(
-                               xcb_get_setup(xcb_connection_)).data;
-        //Generate ID for the X window
-        xcb_window_t XWindowDummy = xcb_generate_id(xcb_connection_);
-
-        //Create dummy X window
-        xcb_create_window(xcb_connection_, 0, XWindowDummy, XFirstScreen->root,
-                      0, 0, 1, 1, 0, 0, 0, 0, 0);
-
-        //Flush pending requests to the X server
-        xcb_flush(xcb_connection_);
-
-        //Send a request for screen resources to the X server
+        const xcb_setup_t *setup = xcb_get_setup(xcb_connection_);
+        screens_ = xcb_setup_roots_iterator(setup).data;
+        n_screens_ = xcb_setup_roots_length(setup);
+    }
+    
+    void XManager::get_outputs_raw_()
+    {
         xcb_randr_get_screen_resources_current_cookie_t screenResCookie = {};
         screenResCookie = xcb_randr_get_screen_resources_current(xcb_connection_, 
-                                                     XWindowDummy);
+                                                     window_dummy_);
 
         //Receive reply from X server
         xcb_randr_get_screen_resources_current_reply_t* screenResReply = {};
         screenResReply = xcb_randr_get_screen_resources_current_reply(xcb_connection_,
                      screenResCookie, 0);
         
-        xcb_randr_output_t *outputs;
-        int n_outputs = 0;
-        
         if(screenResReply) {
-            n_outputs = 
+            n_outputs_ = 
                 xcb_randr_get_screen_resources_current_outputs_length(
                     screenResReply);
-            outputs = 
+            outputs_ = 
                 xcb_randr_get_screen_resources_current_outputs(screenResReply);
-        } else
-            return monitors;
+        }
+    }
+    
+    void XManager::make_window_dummy_()
+    {
+        window_dummy_ = xcb_generate_id(xcb_connection_);
+        xcb_create_window(xcb_connection_, 0, window_dummy_, screens_->root,
+                      0, 0, 1, 1, 0, 0, 0, 0, 0);
+        xcb_flush(xcb_connection_);
+    }
+    
+    std::vector<Monitor> XManager::get_monitors()
+    {
+        std::vector<Monitor> monitors;
                 
         char *output_name;
         
-        printf("Number of outputs: %d\n", n_outputs);
+        printf("Number of outputs: %d\n", n_outputs_);
         
         //getting output properties atoms
         xcb_randr_list_output_properties_cookie_t output_properties_cookie;
@@ -112,11 +114,11 @@ namespace schrandr {
         uint8_t *property_data;
         size_t property_data_length;
         
-        for (int output = 0; output < n_outputs; output++) {
+        for (int output = 0; output < n_outputs_; output++) {
             printf("Not at output %d\n", output);
             xcb_randr_get_output_info_cookie_t output_info_cookie = xcb_randr_get_output_info(
                 xcb_connection_,
-                outputs[output],
+                outputs_[output],
                 XCB_CURRENT_TIME);
             xcb_randr_get_output_info_reply_t *output_info =
                 xcb_randr_get_output_info_reply(xcb_connection_,
@@ -127,7 +129,7 @@ namespace schrandr {
             printf("Output Name: %s\n", output_name);
             
             output_properties_cookie = xcb_randr_list_output_properties(
-                xcb_connection_, outputs[output]);
+                xcb_connection_, outputs_[output]);
             output_properties_reply = xcb_randr_list_output_properties_reply (
                 xcb_connection_, output_properties_cookie, NULL);
             output_properties_atoms = xcb_randr_list_output_properties_atoms(
@@ -145,7 +147,7 @@ namespace schrandr {
                 if (!strcmp(atom_name, "EDID")) {
                     property_cookie = xcb_randr_get_output_property(
                         xcb_connection_,
-                        outputs[output],
+                        outputs_[output],
                         output_properties_atoms[atom],
                         XCB_GET_PROPERTY_TYPE_ANY,
                         0,
