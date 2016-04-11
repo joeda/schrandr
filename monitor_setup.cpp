@@ -25,6 +25,11 @@ namespace schrandr {
         monitors_ = m;
     }
     
+    std::vector<Monitor> MonitorSetup::get_setup()const
+    {
+        return monitors_;
+    }
+    
     Monitor::Monitor(
         unsigned int xr,
         unsigned int yr,
@@ -66,5 +71,10 @@ namespace schrandr {
         std::cout << "Debug B4" << std::endl;
         
         return ret;
+    }
+    
+    std::string Monitor::get_edid()const
+    {
+        return edid_.to_string();
     }
 }

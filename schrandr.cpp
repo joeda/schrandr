@@ -18,6 +18,7 @@
 #include "schrandr.h"
 #include "logging.h"
 #include "xmanager.h"
+#include "config.h"
 
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
@@ -163,9 +164,13 @@ int main(int argc, char **argv)
         monitor_setup.set_monitors(xmanager.get_monitors());
         std::cout << "Debug B1" << std::endl;
         std::vector<std::string> msges = monitor_setup.print_setup();
-        std::cout << "Debug B3" << std::endl;
         logger.log(msges);
-        std::cout << "Debug #7" << std::endl;
+        
+        Config config;
+        config.read();
+        config.add_setup(monitor_setup);
+        config.print_all();
+        config.write();
         
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;

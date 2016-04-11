@@ -17,6 +17,7 @@ namespace schrandr {
             unsigned int yos,
             Edid edid
         );
+        std::string get_edid()const;
         std::vector<std::string> to_string()const;
     
     private:    
@@ -34,6 +35,7 @@ namespace schrandr {
         ~MonitorSetup();
         std::vector<std::string> print_setup();
         void set_monitors(std::vector<Monitor> m);
+        std::vector<Monitor> get_setup()const;
  
     private:
         std::vector<Monitor> monitors_;
