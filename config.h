@@ -16,11 +16,13 @@ namespace schrandr {
         void read();
         void print_all();
         std::string to_string()const;
+        bool has_setup(MonitorSetup ms);
     private:
         std::vector<MonitorSetup> known_setups_;
         std::string config_file_path_;
         std::string empty_setups_path_;
         Json::Value setups_as_json_;
+        Json::Value setup_to_json_(MonitorSetup ms);
     };
 } 
 

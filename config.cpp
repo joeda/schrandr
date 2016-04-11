@@ -2,6 +2,7 @@
 #include <fstream>
 
 #include "config.h"
+#include "monitor_setup.h"
 
 namespace schrandr {
     
@@ -20,7 +21,7 @@ namespace schrandr {
         writer.write(ofs, setups_as_json_);
     }
     
-    void Config::add_setup(MonitorSetup ms)
+    Json::Value Config::setup_to_json_(MonitorSetup ms)
     {
         Json::Value setup;
         Json::Value monitors;
@@ -35,7 +36,21 @@ namespace schrandr {
         }
         setup["monitors"] = monitors;
         setup["screen"] = 0;
-        setups_as_json_["setups"].append(setup);
+        return setup;
+    }
+    
+    void Config::add_setup(MonitorSetup ms)
+    {
+        known_setups_.push_back(ms);
+    }
+    
+    bool Config::has_setup(MonitorSetup ms)
+    {
+        for(auto const& monitor_entry: known_setups_) {
+            if (monitor_entry == ms)
+                return true;
+        }
+        return false;
     }
     
     void Config::read()
