@@ -20,8 +20,8 @@
 #include "xmanager.h"
 #include "config.h"
 
-#include <X11/Xlib.h>
-#include <X11/extensions/Xrandr.h>
+//#include <X11/Xlib.h>
+//#include <X11/extensions/Xrandr.h>
 
 #include <xcb/xcb.h>
 
@@ -100,8 +100,6 @@ int main(int argc, char **argv)
     int c;
     Logger logger;
     XManager xmanager;
-    XRRMonitorInfo *monitor_info;
-    XRRScreenResources *screen_resources;
     MonitorSetup monitor_setup;
     
     std::set_terminate(handle_uncaught);
@@ -195,7 +193,7 @@ int main(int argc, char **argv)
             if (interruption > 0) {
                 break;
             }
-            logger.log(xmanager.get_X_events());
+//            logger.log(xmanager.get_X_events());
         }
         return EXIT_SUCCESS;
     }

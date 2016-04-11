@@ -17,17 +17,10 @@ namespace schrandr {
     XManager::XManager()
     {
         xcb_connection_ = xcb_connect (NULL, NULL);
-        if ((dpy_ = XOpenDisplay(NULL)) == NULL)
-            std::cerr << "Could not open display";
-        XRRSelectInput(dpy_, DefaultRootWindow(dpy_), RROutputChangeNotifyMask);
-        XSync(dpy_, False);
-        //XSetIOErrorHandler((XIOErrorHandler) error_handler_);
-        screen_ = DefaultScreen (dpy_);
-        root_ = RootWindow (dpy_, screen_);
         
-        con_actions.push_back("connected");
-        con_actions.push_back("disconnected");
-        con_actions.push_back("unknown");
+//         con_actions.push_back("connected");
+//         con_actions.push_back("disconnected");
+//         con_actions.push_back("unknown");
     }
     
     XManager::~XManager()
@@ -41,26 +34,26 @@ namespace schrandr {
     }
     
     
-    bool XManager::has_randr_15_(Display *dpy)
-    {
-        int major, minor;
-        int event_base, error_base;
-        if (!XRRQueryExtension (dpy, &event_base, &error_base) ||
-            !XRRQueryVersion (dpy, &major, &minor))
-        {
-            fprintf (stderr, "RandR extension missing\n");
-            exit (EXIT_FAILURE);
-        }
-        if (major > 1 || (major == 1 && minor >= 5))
-            return true;
-        else
-            return false;
-    }
+//     bool XManager::has_randr_15_(Display *dpy)
+//     {
+//         int major, minor;
+//         int event_base, error_base;
+//         if (!XRRQueryExtension (dpy, &event_base, &error_base) ||
+//             !XRRQueryVersion (dpy, &major, &minor))
+//         {
+//             fprintf (stderr, "RandR extension missing\n");
+//             exit (EXIT_FAILURE);
+//         }
+//         if (major > 1 || (major == 1 && minor >= 5))
+//             return true;
+//         else
+//             return false;
+//     }
     
     
-    int predicate_event_(Display *display, XEvent *ev, XPointer arg) {
-        return true;
-    }
+//     int predicate_event_(Display *display, XEvent *ev, XPointer arg) {
+//         return true;
+//     }
     
     std::vector<Monitor> XManager::get_monitors()
     {
@@ -182,54 +175,54 @@ namespace schrandr {
         return monitors;
     }
     
-    std::vector<std::string> XManager::get_X_events()
-    {
-        std::vector<std::string> events;
-        char log_buf[BUFFER_SIZE];
-        char buf[BUFFER_SIZE];
-        
-        int (*predicate_)(Display*, XEvent*, XPointer);
-        predicate_ = &predicate_event_;
-
-        if (XCheckIfEvent(dpy_, &ev_, predicate_, dummy_)) {
-            XRRScreenResources *resources = XRRGetScreenResources(OCNE(&ev_)->display,
-                                                                  OCNE(&ev_)->window);
-            if (resources == NULL) {
-                fprintf(stderr, "Could not get screen resources\n");
-            }
-            XRROutputInfo *info = XRRGetOutputInfo(OCNE(&ev_)->display, resources,
-                                                   OCNE(&ev_)->output);
-            if (info == NULL) {
-                XRRFreeScreenResources(resources);
-                fprintf(stderr, "Could not get output info\n");
-            }
-            snprintf(buf, BUFFER_SIZE, "%s %s", info->name,
-                     con_actions[info->connection]);
-            printf("Event: %s %s\n", info->name,
-                   con_actions[info->connection]);
-            snprintf(log_buf, BUFFER_SIZE, "Event: %s %s\n", info->name, 
-                     con_actions[info->connection]);
-            events.push_back(log_buf);
-            printf("Time: %lu\n", info->timestamp);
-            snprintf(log_buf, BUFFER_SIZE, "Time: %lu\n", info->timestamp);
-            events.push_back(log_buf);
-            if (info->crtc == 0) {
-                printf("Size: %lumm x %lumm\n", info->mm_width, info->mm_height);
-            }
-            else {
-                printf("CRTC: %lu\n", info->crtc);
-                XRRCrtcInfo *crtc = XRRGetCrtcInfo(dpy_, resources, info->crtc);
-                if (crtc != NULL) {
-                    printf("Size: %dx%d\n", crtc->width, crtc->height);
-                    XRRFreeCrtcInfo(crtc);
-                }
-            }
-            XRRFreeScreenResources(resources);
-            XRRFreeOutputInfo(info);
-        } else {
-            events.push_back("No XNextEvent");
-        }
-        
-        return events;
-    }
+//     std::vector<std::string> XManager::get_X_events()
+//     {
+//         std::vector<std::string> events;
+//         char log_buf[BUFFER_SIZE];
+//         char buf[BUFFER_SIZE];
+//         
+//         int (*predicate_)(Display*, XEvent*, XPointer);
+//         predicate_ = &predicate_event_;
+// 
+//         if (XCheckIfEvent(dpy_, &ev_, predicate_, dummy_)) {
+//             XRRScreenResources *resources = XRRGetScreenResources(OCNE(&ev_)->display,
+//                                                                   OCNE(&ev_)->window);
+//             if (resources == NULL) {
+//                 fprintf(stderr, "Could not get screen resources\n");
+//             }
+//             XRROutputInfo *info = XRRGetOutputInfo(OCNE(&ev_)->display, resources,
+//                                                    OCNE(&ev_)->output);
+//             if (info == NULL) {
+//                 XRRFreeScreenResources(resources);
+//                 fprintf(stderr, "Could not get output info\n");
+//             }
+//             snprintf(buf, BUFFER_SIZE, "%s %s", info->name,
+//                      con_actions[info->connection]);
+//             printf("Event: %s %s\n", info->name,
+//                    con_actions[info->connection]);
+//             snprintf(log_buf, BUFFER_SIZE, "Event: %s %s\n", info->name, 
+//                      con_actions[info->connection]);
+//             events.push_back(log_buf);
+//             printf("Time: %lu\n", info->timestamp);
+//             snprintf(log_buf, BUFFER_SIZE, "Time: %lu\n", info->timestamp);
+//             events.push_back(log_buf);
+//             if (info->crtc == 0) {
+//                 printf("Size: %lumm x %lumm\n", info->mm_width, info->mm_height);
+//             }
+//             else {
+//                 printf("CRTC: %lu\n", info->crtc);
+//                 XRRCrtcInfo *crtc = XRRGetCrtcInfo(dpy_, resources, info->crtc);
+//                 if (crtc != NULL) {
+//                     printf("Size: %dx%d\n", crtc->width, crtc->height);
+//                     XRRFreeCrtcInfo(crtc);
+//                 }
+//             }
+//             XRRFreeScreenResources(resources);
+//             XRRFreeOutputInfo(info);
+//         } else {
+//             events.push_back("No XNextEvent");
+//         }
+//         
+//         return events;
+//     }
 }
