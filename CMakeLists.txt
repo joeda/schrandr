@@ -15,16 +15,18 @@ include(FindJSONCpp.cmake)
     if(NOT JSONCPP_FOUND)
         message(FATAL_ERROR "Failed to find JSONCPP")
     endif(NOT JSONCPP_FOUND)
+    
+set(CORE_LIBS logging xmanager monitor_setup edid config screen)
+set(EXT_LIBS ${X11_LIBRARIES} ${X11_Xrandr_LIB} ${XCB_LIBRARIES} ${JSONCPP_LIBRARIES})
 
-add_library(logging logging.cpp)
-add_library(xmanager xmanager.cpp)
-add_library(monitor_setup monitor_setup.cpp)
-add_library(edid edid.cpp)
-add_library(config config.cpp)
+foreach(LIB ${CORE_LIBS})
+    add_library(${LIB} "${LIB}.cpp")
+endforeach(LIB)
+
 add_executable(schrandr schrandr.cpp)
 
 
-set_property(TARGET schrandr logging xmanager monitor_setup edid config PROPERTY CXX_STANDARD 11)
-set_property(TARGET schrandr logging xmanager monitor_setup edid config PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET schrandr ${CORE_LIBS} PROPERTY CXX_STANDARD 11)
+set_property(TARGET schrandr ${CORE_LIBS} PROPERTY CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(schrandr ${X11_LIBRARIES} ${X11_Xrandr_LIB} logging ${XCB_LIBRARIES} xmanager monitor_setup edid config ${JSONCPP_LIBRARIES})
+target_link_libraries(schrandr ${CORE_LIBS} ${EXT_LIBS})
