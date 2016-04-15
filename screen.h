@@ -2,24 +2,30 @@
 #define SCREEN_H_
 
 #include <string>
+#include <vector>
+#include <xcb/randr.h>
+#include <xcb/xcb.h>
 
-namespace schrandr {  
+
+namespace schrandr {
+    
+    struct ScreenSize {
+        unsigned int width;
+        unsigned int height;
+        unsigned int mwidth;
+        unsigned int mheight;
+    };
 
     class Screen {
     public:
         Screen(
-            unsigned int xr,
-            unsigned int yr,
-            unsigned int mx,
-            unsigned int my
+            xcb_randr_screen_size_t *sizes,
+            int sizes_length
         );
         std::string to_string()const;
     
     private:    
-        unsigned int width_;
-        unsigned int height_;
-        unsigned int mwidth_;
-        unsigned int mheight_;
+        std::vector<ScreenSize> sizes_;
     };
 }
 

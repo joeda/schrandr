@@ -187,6 +187,10 @@ int main(int argc, char **argv)
         bool test1 = (my_setup == my_setup);
         std::cout << "my_setup == my_setup: " << std::to_string(test1) << std::endl;
         
+        Screen myscreen = xmanager.get_screen();
+        std::cout << myscreen.to_string() << std::endl;
+        xmanager.get_crtcs();
+        
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;
             usleep(loop_duration);

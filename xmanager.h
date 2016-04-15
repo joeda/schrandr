@@ -12,6 +12,7 @@
 #include <xcb/randr.h>
 
 #include "monitor_setup.h"
+#include "screen.h"
 
 namespace schrandr {
     
@@ -20,6 +21,8 @@ namespace schrandr {
         XManager();
         ~XManager();
         std::vector<Monitor> get_monitors();
+        Screen get_screen();
+        void get_crtcs();
 
     private:
         xcb_connection_t *xcb_connection_;
