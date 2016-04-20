@@ -169,7 +169,9 @@ int main(int argc, char **argv)
 //         mode_manager.get_current_mode();
 //         Mode my_mode = mode_manager.get_current_mode();
 //         config.write_mode(my_mode);
+        
         mode_manager.set_mode(config.read_mode());
+        mode_manager.print_screen_info();
         
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;

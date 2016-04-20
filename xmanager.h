@@ -21,9 +21,9 @@ namespace schrandr {
         XManager();
         ~XManager();
         std::vector<Monitor> get_monitors();
-        void get_crtcs();
         Mode get_mode();
         void set_mode(Mode m);
+        void print_screen_info();
 
     private:
         xcb_connection_t *xcb_connection_;

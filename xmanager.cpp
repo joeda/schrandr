@@ -93,124 +93,8 @@ namespace schrandr {
         xcb_flush(xcb_connection_);
     }
     
-    void XManager::get_crtcs()
+    void XManager::print_screen_info()
     {
-        xcb_randr_get_screen_resources_current_cookie_t screen_resources_cookie = 
-            xcb_randr_get_screen_resources_current(xcb_connection_, window_dummy_);
-        xcb_randr_get_screen_resources_current_reply_t *screen_resources_reply = 
-            xcb_randr_get_screen_resources_current_reply(
-                xcb_connection_, screen_resources_cookie, NULL);
-        xcb_randr_mode_info_t *modes = xcb_randr_get_screen_resources_current_modes(
-            screen_resources_reply);
-        xcb_randr_mode_t *modes2;
-        int n_modes2;
-        int n_modes = xcb_randr_get_screen_resources_current_modes_length(
-            screen_resources_reply);
-        std::cout << "Found " << std::to_string(n_modes) << " modes for screen."
-            << std::endl;
-        for(int i = 0; i < n_modes; i++) {
-            std::cout << "\tMode " << std::to_string(modes[i].id) << std::endl;
-            std::cout << "\tWidth: " << std::to_string(modes[i].width) << std::endl;
-            std::cout << "\tHeight: " << std::to_string(modes[i].height) << std::endl;
-        }
-        
-        xcb_randr_crtc_t *crtcs 
-            = xcb_randr_get_screen_resources_current_crtcs(screen_resources_reply);
-        int n_crtcs = xcb_randr_get_screen_resources_current_crtcs_length(screen_resources_reply);
-        
-        xcb_randr_get_crtc_info_cookie_t crtc_info_cookie;
-        xcb_randr_get_crtc_info_reply_t *crtc_info_reply;
-        xcb_randr_output_t *outputs;
-        int n_outputs;
-        xcb_randr_get_output_info_cookie_t output_info_cookie;
-        xcb_randr_get_output_info_reply_t *output_info_reply;
-        uint8_t *name;
-        char *cname;
-        int n_name;
-        
-        std::cout << "Found " << std::to_string(n_crtcs) << "CRTCs." << std::endl;
-        for (int i = 0; i < 1; i++) {
-            std::cout << "Now at CRTC " << std::to_string(crtcs[i]) << std::endl;
-            crtc_info_cookie = xcb_randr_get_crtc_info (
-                xcb_connection_, crtcs[i], XCB_CURRENT_TIME);
-            crtc_info_reply = xcb_randr_get_crtc_info_reply(
-                xcb_connection_, crtc_info_cookie, NULL);
-            outputs = xcb_randr_get_crtc_info_outputs(crtc_info_reply);
-            n_outputs = xcb_randr_get_crtc_info_outputs_length(crtc_info_reply);
-            std::cout << "This CRTC has " << std::to_string(n_outputs) << " outputs." << std::endl;
-            for (int o = 0; o < n_outputs; o++) {
-                output_info_cookie = xcb_randr_get_output_info(
-                    xcb_connection_, outputs[o], XCB_CURRENT_TIME);
-                output_info_reply = xcb_randr_get_output_info_reply(
-                    xcb_connection_, output_info_cookie, XCB_CURRENT_TIME);
-                name = xcb_randr_get_output_info_name(output_info_reply);
-                n_name = xcb_randr_get_output_info_name_length(output_info_reply);
-                cname = reinterpret_cast<char*>(name);
-                cname[n_name] = '\0';
-                printf("Output %i: %s\n", o, cname);
-                
-                modes2 = xcb_randr_get_output_info_modes(output_info_reply);
-                n_modes2 = xcb_randr_get_output_info_modes_length (output_info_reply);
-            }
-//             outputs = xcb_randr_get_crtc_info_possible(crtc_info_reply);
-//             n_outputs = xcb_randr_get_crtc_info_possible_length(crtc_info_reply);
-//             std::cout << "This CRTC has " << std::to_string(n_outputs) << " possible outputs." << std::endl;
-//             for (int o = 0; o < n_outputs; o++) {
-//                 output_info_cookie = xcb_randr_get_output_info(
-//                     xcb_connection_, outputs[o], XCB_CURRENT_TIME);
-//                 output_info_reply = xcb_randr_get_output_info_reply(
-//                     xcb_connection_, output_info_cookie, XCB_CURRENT_TIME);
-//                 name = xcb_randr_get_output_info_name(output_info_reply);
-//                 cname = reinterpret_cast<char*>(name);
-//                 n_name = xcb_randr_get_output_info_name_length(output_info_reply);
-//                 cname[n_name] = '\0';
-//                 printf("Possible Output %i: %s\n", o, cname);
-//             }
-        }
-        
-        xcb_randr_set_crtc_config_cookie_t crtc_config_cookie;
-        crtc_config_cookie = xcb_randr_set_crtc_config (xcb_connection_,
-                                   crtcs[0],
-                                   XCB_CURRENT_TIME,
-                                   XCB_CURRENT_TIME,
-                                   0,
-                                   0,
-                                   modes2[0],
-                                   XCB_RANDR_ROTATION_ROTATE_0, 
-                                   n_outputs,
-                                   outputs);
-        xcb_randr_set_crtc_config_reply_t *crtc_config_reply 
-            = xcb_randr_set_crtc_config_reply(xcb_connection_, crtc_config_cookie, NULL);
-        std::cout << "Config response : " << std::to_string(crtc_config_reply->response_type) << std::endl;
-        std::cout << "Config status : " << std::to_string(crtc_config_reply->status) << std::endl;
-    }
-    
-    void XManager::set_mode(Mode m)
-    {
-        for(auto const& crtc: m.get_crtcs()) {
-            Output output;
-            output = crtc.outputs.front();
-            xcb_randr_set_crtc_config_cookie_t crtc_config_cookie;
-            crtc_config_cookie = xcb_randr_set_crtc_config (xcb_connection_,
-                                   crtc.crtc,
-                                   XCB_CURRENT_TIME,
-                                   XCB_CURRENT_TIME,
-                                   static_cast<int16_t>(output.x),
-                                   static_cast<int16_t>(output.y),
-                                   output.mode,
-                                   XCB_RANDR_ROTATION_ROTATE_0, 
-                                   1,
-                                   &output.output);
-            xcb_randr_set_crtc_config_reply_t *crtc_config_reply 
-                = xcb_randr_set_crtc_config_reply(xcb_connection_, crtc_config_cookie, NULL);
-            std::cout << "Config response : " << std::to_string(crtc_config_reply->response_type) << std::endl;
-            std::cout << "Config status : " << std::to_string(crtc_config_reply->status) << std::endl;
-        }
-    }
-    
-    Mode XManager::get_mode()
-    {
-        Mode res;
         xcb_randr_get_screen_info_cookie_t screen_info_cookie = 
             xcb_randr_get_screen_info(xcb_connection_, window_dummy_);
         xcb_randr_get_screen_info_reply_t *screen_info_reply = 
@@ -220,66 +104,134 @@ namespace schrandr {
             xcb_randr_get_screen_info_sizes(screen_info_reply);
         int n_sizes = 
             xcb_randr_get_screen_info_sizes_length (screen_info_reply);
+        std::cout << "Screen sizeID: " 
+            << std::to_string(screen_info_reply->sizeID) << std::endl;
+        for (int i = 0; i < n_sizes; i++) {
+            std::cout << "Size " << std::to_string(i) << std::endl;
+            std::cout << "-------------------" << std::endl;
+            std::cout << "\tWidth: " << 
+                std::to_string(screen_sizes[i].width);
+            std::cout << "\n\tHeight: " 
+                << std::to_string(screen_sizes[i].height);
+            std::cout << "\n\tMWidth: "
+                << std::to_string(screen_sizes[i].mwidth);
+            std::cout << "\n\tMHeight: "
+                << std::to_string(screen_sizes[i].mheight);
+            std::cout << "\n-----------------" << std::endl;
+            std::cout << std::endl;
+        }
+        std::cout << "Size: " << std::to_string(screens_->width_in_pixels) << "x"
+            << std::to_string(screens_->height_in_pixels) << std::endl;
+        std::cout << "Size in mm: " 
+            << std::to_string(screens_->width_in_millimeters) << "x"
+            << std::to_string(screens_->height_in_millimeters) << std::endl;
         
-        xcb_randr_mode_t *modes;
-        int n_modes;
         
-        xcb_randr_get_screen_resources_current_cookie_t screen_resources_cookie = 
-            xcb_randr_get_screen_resources_current(xcb_connection_, window_dummy_);
-        xcb_randr_get_screen_resources_current_reply_t *screen_resources_reply = 
-            xcb_randr_get_screen_resources_current_reply(
-                xcb_connection_, screen_resources_cookie, NULL);
-        
-        xcb_randr_crtc_t *crtcs 
-            = xcb_randr_get_screen_resources_current_crtcs(screen_resources_reply);
-        int n_crtcs = xcb_randr_get_screen_resources_current_crtcs_length(screen_resources_reply);
-        
-        xcb_randr_get_crtc_info_cookie_t crtc_info_cookie;
-        xcb_randr_get_crtc_info_reply_t *crtc_info_reply;
-        xcb_randr_output_t *outputs;
-        int n_outputs;
-        xcb_randr_get_output_info_cookie_t output_info_cookie;
-        xcb_randr_get_output_info_reply_t *output_info_reply;
-        uint8_t *name;
-        char *cname;
-        int n_name;
-        
-        //std::vector<CRTC> res.crtcs_;
-        
-        std::cout << "Found " << std::to_string(n_crtcs) << "CRTCs." << std::endl;
-        for (int i = 0; i < n_crtcs; i++) {
-            CRTC crtc;
-            crtc.crtc = crtcs[i];
-            //std::vector<Output> crtc.outputs;
-            std::cout << "Now at CRTC " << std::to_string(crtcs[i]) << std::endl;
-            crtc_info_cookie = xcb_randr_get_crtc_info (
-                xcb_connection_, crtcs[i], XCB_CURRENT_TIME);
-            crtc_info_reply = xcb_randr_get_crtc_info_reply(
-                xcb_connection_, crtc_info_cookie, NULL);
-            outputs = xcb_randr_get_crtc_info_outputs(crtc_info_reply);
-            n_outputs = xcb_randr_get_crtc_info_outputs_length(crtc_info_reply);
-            std::cout << "This CRTC has " << std::to_string(n_outputs) << " outputs." << std::endl;
-            for (int o = 0; o < n_outputs; o++) {
-                Output op;
-                op.output = outputs[o];
-                output_info_cookie = xcb_randr_get_output_info(
-                    xcb_connection_, outputs[o], XCB_CURRENT_TIME);
-                output_info_reply = xcb_randr_get_output_info_reply(
-                    xcb_connection_, output_info_cookie, XCB_CURRENT_TIME);
-                name = xcb_randr_get_output_info_name(output_info_reply);
-                n_name = xcb_randr_get_output_info_name_length(output_info_reply);
-                cname = reinterpret_cast<char*>(name);
-                cname[n_name] = '\0';
-                printf("Output %i: %s\n", o, cname);
-                
-                modes = xcb_randr_get_output_info_modes(output_info_reply);
-                n_modes = xcb_randr_get_output_info_modes_length (output_info_reply);
-                op.mode = modes[0];
-                op.x = crtc_info_reply->x;
-                op.y = crtc_info_reply->y;
-                crtc.outputs.push_back(op);
+    }
+    
+    void XManager::set_mode(Mode m)
+    {
+        for(auto const& screen: m.get_screens()) {
+            xcb_randr_set_screen_size(xcb_connection_,
+                    window_dummy_,
+                    static_cast<uint16_t>(screen.width),
+                    static_cast<uint16_t>(screen.height),
+                    static_cast<uint32_t>(screen.width_mm),
+                    static_cast<uint32_t>(screen.height_mm));
+            for(auto const& crtc: screen.get_crtcs()) {
+                Output output;
+                output = crtc.outputs.front();
+                xcb_randr_set_crtc_config_cookie_t crtc_config_cookie;
+                crtc_config_cookie = xcb_randr_set_crtc_config (xcb_connection_,
+                                    crtc.crtc,
+                                    XCB_CURRENT_TIME,
+                                    XCB_CURRENT_TIME,
+                                    static_cast<int16_t>(output.x),
+                                    static_cast<int16_t>(output.y),
+                                    output.mode,
+                                    XCB_RANDR_ROTATION_ROTATE_0, 
+                                    1,
+                                    &output.output);
+                xcb_randr_set_crtc_config_reply_t *crtc_config_reply 
+                    = xcb_randr_set_crtc_config_reply(xcb_connection_, crtc_config_cookie, NULL);
+                std::cout << "Config response : " << std::to_string(crtc_config_reply->response_type) << std::endl;
+                std::cout << "Config status : " << std::to_string(crtc_config_reply->status) << std::endl;
             }
-            res.add_crtc(crtc);
+        }
+    }
+    
+    Mode XManager::get_mode()
+    {
+        Mode res;
+        
+        for (int s = 0; s < n_screens_; s++) {
+            Screen screen;
+            screen.width = screens_[s].width_in_pixels;
+            screen.height = screens_[s].height_in_pixels;
+            screen.width_mm = screens_[s].width_in_millimeters;
+            screen.height_mm = screens_[s].height_in_millimeters;
+        
+            xcb_randr_mode_t *modes;
+            int n_modes;
+            
+            xcb_randr_get_screen_resources_current_cookie_t screen_resources_cookie = 
+                xcb_randr_get_screen_resources_current(xcb_connection_, window_dummy_);
+            xcb_randr_get_screen_resources_current_reply_t *screen_resources_reply = 
+                xcb_randr_get_screen_resources_current_reply(
+                    xcb_connection_, screen_resources_cookie, NULL);
+            
+            xcb_randr_crtc_t *crtcs 
+                = xcb_randr_get_screen_resources_current_crtcs(screen_resources_reply);
+            int n_crtcs = xcb_randr_get_screen_resources_current_crtcs_length(screen_resources_reply);
+            
+            xcb_randr_get_crtc_info_cookie_t crtc_info_cookie;
+            xcb_randr_get_crtc_info_reply_t *crtc_info_reply;
+            xcb_randr_output_t *outputs;
+            int n_outputs;
+            xcb_randr_get_output_info_cookie_t output_info_cookie;
+            xcb_randr_get_output_info_reply_t *output_info_reply;
+            uint8_t *name;
+            char *cname;
+            int n_name;
+            
+            //std::vector<CRTC> res.crtcs_;
+            
+            std::cout << "Found " << std::to_string(n_crtcs) << "CRTCs." << std::endl;
+            for (int i = 0; i < n_crtcs; i++) {
+                CRTC crtc;
+                crtc.crtc = crtcs[i];
+                //std::vector<Output> crtc.outputs;
+                std::cout << "Now at CRTC " << std::to_string(crtcs[i]) << std::endl;
+                crtc_info_cookie = xcb_randr_get_crtc_info (
+                    xcb_connection_, crtcs[i], XCB_CURRENT_TIME);
+                crtc_info_reply = xcb_randr_get_crtc_info_reply(
+                    xcb_connection_, crtc_info_cookie, NULL);
+                outputs = xcb_randr_get_crtc_info_outputs(crtc_info_reply);
+                n_outputs = xcb_randr_get_crtc_info_outputs_length(crtc_info_reply);
+                std::cout << "This CRTC has " << std::to_string(n_outputs) << " outputs." << std::endl;
+                for (int o = 0; o < n_outputs; o++) {
+                    Output op;
+                    op.output = outputs[o];
+                    output_info_cookie = xcb_randr_get_output_info(
+                        xcb_connection_, outputs[o], XCB_CURRENT_TIME);
+                    output_info_reply = xcb_randr_get_output_info_reply(
+                        xcb_connection_, output_info_cookie, XCB_CURRENT_TIME);
+                    name = xcb_randr_get_output_info_name(output_info_reply);
+                    n_name = xcb_randr_get_output_info_name_length(output_info_reply);
+                    cname = reinterpret_cast<char*>(name);
+                    cname[n_name] = '\0';
+                    printf("Output %i: %s\n", o, cname);
+                    
+                    modes = xcb_randr_get_output_info_modes(output_info_reply);
+                    n_modes = xcb_randr_get_output_info_modes_length (output_info_reply);
+                    op.mode = modes[0];
+                    op.x = crtc_info_reply->x;
+                    op.y = crtc_info_reply->y;
+                    crtc.outputs.push_back(op);
+                }
+                screen.add_crtc(crtc);
+            }
+            res.add_screen(screen);
         }
         
         return res;

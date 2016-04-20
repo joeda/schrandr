@@ -16,4 +16,9 @@ namespace schrandr {
     {
         xmanager_.set_mode(mode);
     }
+    
+    void ModeManager::print_screen_info()
+    {
+        xmanager_.print_screen_info();
+    }
 } 

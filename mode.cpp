@@ -9,12 +9,22 @@ namespace schrandr {
     Mode::Mode()
     {}
     
-    void Mode::add_crtc(CRTC c)
+    void Mode::add_screen(Screen s)
+    {
+        screens_.push_back(s);
+    }
+    
+    std::vector<Screen> Mode::get_screens()
+    {
+        return screens_;
+    }
+    
+    void Screen::add_crtc(CRTC c)
     {
         crtcs_.push_back(c);
     }
     
-    std::vector<CRTC> Mode::get_crtcs()
+    std::vector<CRTC> Screen::get_crtcs()const
     {
         return crtcs_;
     }

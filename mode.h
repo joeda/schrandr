@@ -10,7 +10,7 @@
 
 
 namespace schrandr {
-        
+    
     struct Output {
         xcb_randr_output_t output;
         xcb_randr_mode_t mode;
@@ -23,14 +23,25 @@ namespace schrandr {
         std::vector<Output> outputs;
     };
     
+    class Screen {
+    public:
+        int width;
+        int height;
+        int width_mm;
+        int height_mm;
+        std::vector<CRTC> crtcs_;
+        void add_crtc(CRTC c);
+        std::vector<CRTC> get_crtcs()const;
+    };
+    
     class Mode {
     public:
         Mode();
-        void add_crtc(CRTC c);
-        std::vector<CRTC> get_crtcs();
+        void add_screen(Screen s);
+        std::vector<Screen> get_screens();
     
     private:    
-        std::vector<CRTC> crtcs_;
+        std::vector<Screen> screens_;
     };
 } 
 
