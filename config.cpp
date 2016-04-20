@@ -1,8 +1,9 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include "config.h"
-#include "monitor_setup.h"
+#include "mode.h"
 
 namespace schrandr {
     
@@ -17,40 +18,10 @@ namespace schrandr {
     {
         std::ofstream ofs;
         ofs.open(config_file_path_, std::ofstream::out | std::ofstream::trunc);
-        Json::StyledStreamWriter writer;
-        writer.write(ofs, setups_as_json_);
-    }
-    
-    Json::Value Config::setup_to_json_(MonitorSetup ms)
-    {
-        Json::Value setup;
-        Json::Value monitors;
-        Json::Value screen;
-        
-        for(auto const& monitor_entry: ms.get_setup()) {
-            Json::Value monitor;
-            monitor["EDID"] = monitor_entry.get_edid();
-            monitor["xres"] = 4;
-            monitor["yres"] = 5;
-            monitors.append(monitor);
-        }
-        setup["monitors"] = monitors;
-        setup["screen"] = 0;
-        return setup;
-    }
-    
-    void Config::add_setup(MonitorSetup ms)
-    {
-        known_setups_.push_back(ms);
-    }
-    
-    bool Config::has_setup(MonitorSetup ms)
-    {
-        for(auto const& monitor_entry: known_setups_) {
-            if (monitor_entry == ms)
-                return true;
-        }
-        return false;
+        std::stringstream ss;
+        ss.str(std::string());
+        json_adapter_.write_to_stream(&ss, setups_as_json_);
+        ofs << ss.rdbuf() << std::flush;
     }
     
     void Config::read()
@@ -58,18 +29,19 @@ namespace schrandr {
         std::ifstream config_file(config_file_path_);
         if (!config_file.good())
             config_file.open(empty_setups_path_);
-        Json::Reader reader;
-        bool parsed_success = reader.parse(config_file, setups_as_json_, false);
+        setups_as_json_ = json_adapter_.read_stream(&config_file);
     }
     
     void Config::print_all() 
     {
-        Json::StyledWriter writer;
-        std::string stuff = writer.write(setups_as_json_);
-        std::cout << stuff << std::endl;
+        json_adapter_.write_to_stream(&std::cout, setups_as_json_);
+        std::cout << std::endl;
     }
-    std::string Config::to_string()const
+    
+    void Config::write_mode(Mode m)
     {
-        
+        std::ofstream ofs;
+        ofs.open(config_file_path_, std::ofstream::out | std::ofstream::trunc);
+        json_adapter_.write_to_stream(&ofs, json_adapter_.mode_to_json(m));
     }
-} 
+}  

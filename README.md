@@ -6,15 +6,15 @@ I would probably call it experimental, but this would imply that there is a at l
 
 ### Milestones
 
-1. ~~A daemon that runs, detects changes in Monitor connections and logs them.~~
+1. A daemon that runs, detects changes in Monitor connections and logs them.
 
 2. ~~Detecting the current Monitor setup and (de)serializing it.~~
 
 3. ~~Reading and Writing setups to file and comparing them to the current setup.~~
 
-4. Eliminating XLib
+4. ~~Eliminating XLib~~
 
-5. Getting the current screen setup
+5. ~~Getting the current screen setup~~
 
 6. (De)serializing screen setups and comparing them
 

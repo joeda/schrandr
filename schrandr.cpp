@@ -15,9 +15,12 @@
 
 #include <stdlib.h>
 #include <signal.h>                                         // sigaction
+
 #include "schrandr.h"
 #include "logging.h"
 #include "xmanager.h"
+#include "mode.h"
+#include "modemanager.h"
 #include "config.h"
 
 //#include <X11/Xlib.h>
@@ -159,37 +162,13 @@ int main(int argc, char **argv)
         sample_data.push_back("Bananas");
         sample_data.push_back("Apples");
         logger.log(sample_data);
-        monitor_setup.set_monitors(xmanager.get_monitors());
-        std::vector<std::string> msges = monitor_setup.print_setup();
-        logger.log(msges);
-        
-        size_t edid_length = 128;
-        uint8_t myedid_a[edid_length];
-        for (int i = 0; i < edid_length; i++) {
-            myedid_a[i] = 0x11;
-        }
-        Edid myedid(myedid_a, edid_length);
-        std::vector<Monitor> my_monitors;
-        my_monitors.push_back(Monitor(2,3,4,5,myedid));
-        MonitorSetup my_setup;
-        my_setup.set_monitors(my_monitors);
         
         Config config;
-        config.read();
-        config.add_setup(monitor_setup);
-        config.print_all();
-        config.write();
+        ModeManager mode_manager;
         
-        bool my_present = config.has_setup(my_setup);
-        bool current_setup = config.has_setup(monitor_setup);
-        std::cout << "my_setup present: " << std::to_string(my_present) << std::endl;
-        std::cout << "current setup present: " << std::to_string(current_setup) << std::endl;
-        bool test1 = (my_setup == my_setup);
-        std::cout << "my_setup == my_setup: " << std::to_string(test1) << std::endl;
-        
-        Screen myscreen = xmanager.get_screen();
-        std::cout << myscreen.to_string() << std::endl;
-        xmanager.get_crtcs();
+        mode_manager.get_current_mode();
+        Mode my_mode = mode_manager.get_current_mode();
+        config.write_mode(my_mode);
         
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;
