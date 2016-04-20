@@ -16,11 +16,11 @@ namespace schrandr {
     public:
         ModeManager();
         Mode get_current_mode();
+        void set_mode(Mode mode);
         
     private:    
         Mode current_mode_;
         XManager xmanager_;
-        void set_mode_(Mode mode);
     };
 } 
 

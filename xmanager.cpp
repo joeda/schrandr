@@ -196,7 +196,7 @@ namespace schrandr {
                                    XCB_CURRENT_TIME,
                                    XCB_CURRENT_TIME,
                                    static_cast<int16_t>(output.x),
-                                   static_cast<int16_t>(output.x),
+                                   static_cast<int16_t>(output.y),
                                    output.mode,
                                    XCB_RANDR_ROTATION_ROTATE_0, 
                                    1,
@@ -275,8 +275,8 @@ namespace schrandr {
                 modes = xcb_randr_get_output_info_modes(output_info_reply);
                 n_modes = xcb_randr_get_output_info_modes_length (output_info_reply);
                 op.mode = modes[0];
-                op.x = 0;
-                op.y = 0;
+                op.x = crtc_info_reply->x;
+                op.y = crtc_info_reply->y;
                 crtc.outputs.push_back(op);
             }
             res.add_crtc(crtc);

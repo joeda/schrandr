@@ -13,6 +13,7 @@ namespace schrandr {
     public:
         Config();
         void write_mode(Mode m);
+        Mode read_mode();
         void write();
         void read();
         void print_all();

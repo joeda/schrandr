@@ -32,6 +32,13 @@ namespace schrandr {
         setups_as_json_ = json_adapter_.read_stream(&config_file);
     }
     
+    Mode Config::read_mode()
+    {
+        std::ifstream config_file(config_file_path_);
+        Json::Value json_mode = json_adapter_.read_stream(&config_file);
+        return json_adapter_.mode_from_json(json_mode);
+    }
+    
     void Config::print_all() 
     {
         json_adapter_.write_to_stream(&std::cout, setups_as_json_);

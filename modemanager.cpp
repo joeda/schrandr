@@ -12,6 +12,8 @@ namespace schrandr {
         return current_mode_;
     }
     
-    void ModeManager::set_mode_(Mode mode)
-    {}
+    void ModeManager::set_mode(Mode mode)
+    {
+        xmanager_.set_mode(mode);
+    }
 } 
