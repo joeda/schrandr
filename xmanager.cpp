@@ -229,7 +229,9 @@ namespace schrandr {
                     op.y = crtc_info_reply->y;
                     crtc.outputs.push_back(op);
                 }
-                screen.add_crtc(crtc);
+                if (n_outputs > 0) {
+                    screen.add_crtc(crtc);
+                }
             }
             res.add_screen(screen);
         }
