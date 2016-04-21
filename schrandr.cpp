@@ -162,7 +162,7 @@ int main(int argc, char **argv)
         sample_data.push_back("Bananas");
         sample_data.push_back("Apples");
         logger.log(sample_data);
-        
+        std::cout << "Debug D5" << std::endl;
         Config config;
         ModeManager mode_manager;
         
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
         config.write_mode(my_mode);
         
         //mode_manager.set_mode(config.read_mode());
-        mode_manager.print_screen_info();
+        std::cout << "Debug D4" << std::endl;
         
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;
@@ -178,7 +178,8 @@ int main(int argc, char **argv)
             if (interruption > 0) {
                 break;
             }
-//            logger.log(xmanager.get_X_events());
+            mode_manager.get_next_event();
+            std::cout << "Debug D3" << std::endl;
         }
         return EXIT_SUCCESS;
     }

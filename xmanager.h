@@ -24,6 +24,7 @@ namespace schrandr {
         Mode get_mode();
         void set_mode(Mode m);
         void print_screen_info();
+        void get_next_event();
 
     private:
         xcb_connection_t *xcb_connection_;
@@ -32,6 +33,7 @@ namespace schrandr {
         int n_outputs_;
         xcb_screen_t *screens_;
         int n_screens_;
+        xcb_generic_event_t *ev_;
         
         void get_screens_raw_();
         void get_outputs_raw_();

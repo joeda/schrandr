@@ -18,7 +18,7 @@ namespace schrandr {
         Mode get_current_mode();
         void set_mode(Mode mode);
         void print_screen_info();
-        
+        void get_next_event();
     private:    
         Mode current_mode_;
         XManager xmanager_;

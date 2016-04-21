@@ -90,6 +90,12 @@ namespace schrandr {
         window_dummy_ = xcb_generate_id(xcb_connection_);
         xcb_create_window(xcb_connection_, 0, window_dummy_, screens_->root,
                       0, 0, 1, 1, 0, 0, 0, 0, 0);
+        xcb_randr_select_input(xcb_connection_, window_dummy_,
+                            XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE |
+                                XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE |
+                                XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE |
+                                XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY);
+
         xcb_flush(xcb_connection_);
     }
     
@@ -324,6 +330,49 @@ namespace schrandr {
         }
         
         return monitors;
+    }
+    
+    void XManager::get_next_event()
+    {
+        std::cout << "Debug D1" << std::endl;
+        while ((ev_ = xcb_poll_for_event(xcb_connection_)) != NULL) {
+            if (ev_->response_type == 0) {
+                std::cout << "Response type 0" << std::endl;
+                free(ev_);
+                continue;
+             }
+            int type = (ev_->response_type & ~0x7F);
+            std::cout << "Response Type: " << std::to_string(ev_->response_type)
+                << "\nShifted: " << std::to_string(type)
+                << std::endl;
+            std::cout << "Screen Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE) << std::endl;
+            std::cout << "Output Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE) << std::endl;
+            std::cout << "CRTC Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE) << std::endl;
+            std::cout << "Property Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY) << std::endl;
+            switch (type) {
+            case XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE: {
+                std::cout << "Screen change" << std::endl;
+                break;
+            }
+            case XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE: {
+                std::cout << "Output change" << std::endl;
+                break;
+            }
+            case XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE: {
+                std::cout << "CRTC change" << std::endl;
+                break;
+            }
+            case XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY: {
+                std::cout << "Output Property change" << std::endl;
+                break;
+            }
+            default: {
+                std::cout << "None of Screen, output or CRTC change" << std::endl;
+                break;
+            }
+            }
+        free(ev_);
+        }
     }
     
 //     std::vector<std::string> XManager::get_X_events()

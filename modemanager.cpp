@@ -21,4 +21,9 @@ namespace schrandr {
     {
         xmanager_.print_screen_info();
     }
+    
+    void ModeManager::get_next_event()
+    {
+        xmanager_.get_next_event();
+    }
 } 
