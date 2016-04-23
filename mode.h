@@ -2,6 +2,7 @@
 #define MODE_H_
 
 #include "monitor_setup.h"
+#include "edid.h"
 
 #include <string>
 #include <vector>
@@ -16,6 +17,7 @@ namespace schrandr {
         xcb_randr_mode_t mode;
         int x;
         int y;
+        Edid edid;
     };
     
     struct CRTC {
@@ -39,9 +41,12 @@ namespace schrandr {
         Mode();
         void add_screen(Screen s);
         std::vector<Screen> get_screens();
+        MonitorSetup get_montior_setup();
+        void set_monitor_setup(MonitorSetup s);
     
     private:    
         std::vector<Screen> screens_;
+        MonitorSetup monitor_setup_;
     };
 } 
 

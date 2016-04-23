@@ -28,5 +28,15 @@ namespace schrandr {
     {
         return crtcs_;
     }
+    
+    MonitorSetup Mode::get_montior_setup()
+    {
+        return monitor_setup_;
+    }
+    
+    void Mode::set_monitor_setup(MonitorSetup s)
+    {
+        monitor_setup_ = s;
+    }
 }
 

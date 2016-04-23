@@ -3,6 +3,8 @@
 #include <sstream>
 
 #include "config.h"
+#include "mode.h"
+#include "edid.h"
 
 namespace schrandr {
     
@@ -27,22 +29,30 @@ namespace schrandr {
         return res;
     }
     
+    MonitorSetup JSONAdapter::setup_from_json(Json::Value root)
+    {
+        MonitorSetup m;
+        Json::Value json_edids = root["EDIDs"];
+        if(json_edids.isArray()) {
+            for (int i = 0; i < json_edids.size(); i++) {
+                Edid e(json_edids[i].asString());
+                m.add_edid(e);
+            }
+        }
+        return m;
+    }
+    
     Json::Value JSONAdapter::setup_to_json_(MonitorSetup ms)
     {
-        Json::Value setup;
-        Json::Value monitors;
-        Json::Value screen;
+        Json::Value root;
+        Json::Value json_edids;
         
-        for(auto const& monitor_entry: ms.get_setup()) {
-            Json::Value monitor;
-            monitor["EDID"] = monitor_entry.get_edid();
-            monitor["xres"] = 4;
-            monitor["yres"] = 5;
-            monitors.append(monitor);
+        for(auto const& edid: ms.get_edids()) {
+            json_edids.append(edid.to_string());
         }
-        setup["monitors"] = monitors;
-        setup["screen"] = 0;
-        return setup;
+        root["EDIDs"] = json_edids;
+        
+        return root;
     }
     
     Mode JSONAdapter::mode_from_json(Json::Value root)
@@ -88,6 +98,7 @@ namespace schrandr {
                                 output_as_uint = static_cast<uint32_t>(output_as_int);
                                 output.mode = static_cast<xcb_randr_mode_t>(mode_as_uint);
                                 output.output = static_cast<xcb_randr_output_t>(output_as_uint);
+                                output.edid.set_edid(json_output["EDID"].asString());
                                 crtc.outputs.push_back(output);
                             }
                         }
@@ -120,6 +131,7 @@ namespace schrandr {
                     json_output["x"] = output.x;
                     json_output["y"] = output.y;
                     json_output["output"] = reinterpret_cast<uint32_t>(output.output);
+                    json_output["EDID"] = output.edid.to_string();
                     outputs.append(json_output);
                 }
                 json_crtc["outputs"] = outputs;

@@ -8,6 +8,8 @@
 
 #include "xmanager.h"
 #include "mode.h"
+#include "edid.h"
+#include "monitor_setup.h"
 
 #define OCNE(X) ((XRROutputChangeNotifyEvent*)X)
 #define BUFFER_SIZE 128
@@ -166,6 +168,71 @@ namespace schrandr {
         }
     }
     
+    Edid XManager::get_edid_(xcb_randr_output_t *output)
+    {
+        xcb_atom_t *output_properties_atoms;
+        int n_atoms;
+        //getting atom names
+        xcb_get_atom_name_cookie_t atom_name_cookie;
+        xcb_get_atom_name_reply_t *atom_name_reply;
+        char *atom_name;
+        int atom_name_length;
+        //getting atom content
+        xcb_randr_get_output_property_cookie_t property_cookie;
+        xcb_randr_get_output_property_reply_t *property_reply;
+        uint8_t *property_data;
+        size_t property_data_length;
+        xcb_randr_list_output_properties_reply_t *output_properties_reply;
+        xcb_randr_list_output_properties_cookie_t output_properties_cookie;
+        
+        output_properties_cookie = xcb_randr_list_output_properties(
+                xcb_connection_, *output);
+        output_properties_reply = xcb_randr_list_output_properties_reply (
+                xcb_connection_, output_properties_cookie, NULL);
+        output_properties_atoms = xcb_randr_list_output_properties_atoms(
+            output_properties_reply);
+        n_atoms = xcb_randr_list_output_properties_atoms_length(
+            output_properties_reply);
+        
+        std::cout << "Debug D9" << std::endl;
+        for (int atom = 0; atom < n_atoms; atom++) {
+            atom_name_cookie = xcb_get_atom_name(
+                xcb_connection_, output_properties_atoms[atom]);
+            atom_name_reply = xcb_get_atom_name_reply (
+                xcb_connection_, atom_name_cookie, NULL);
+            std::cout << "Debug D10" << std::endl;
+            atom_name = xcb_get_atom_name_name(atom_name_reply);
+            atom_name_length = xcb_get_atom_name_name_length(atom_name_reply);
+            atom_name[atom_name_length] = '\0';
+            printf("Atom Name: %s\n", atom_name);
+            
+            if (!strcmp(atom_name, "EDID")) {
+                property_cookie = xcb_randr_get_output_property(
+                    xcb_connection_,
+                    *output,
+                    output_properties_atoms[atom],
+                    XCB_GET_PROPERTY_TYPE_ANY,
+                    0,
+                    100,
+                    0,
+                    0);
+                property_reply = xcb_randr_get_output_property_reply(
+                    xcb_connection_, property_cookie, NULL);
+                property_data = xcb_randr_get_output_property_data(
+                    property_reply);
+                property_data_length = 
+                    xcb_randr_get_output_property_data_length(
+                        property_reply);
+                std::cout << "EDID: ";
+                for (int i = 0; i < property_data_length; i++) {
+                    std::cout << std::setw(2) << std::setfill('0') << std::hex << (int) property_data[i];
+                }
+                std::cout << std::endl;
+                return Edid(property_data, property_data_length);
+            }
+        }
+    }
+    
     Mode XManager::get_mode()
     {
         Mode res;
@@ -233,6 +300,7 @@ namespace schrandr {
                     op.mode = modes[0];
                     op.x = crtc_info_reply->x;
                     op.y = crtc_info_reply->y;
+                    op.edid = get_edid_(&outputs[o]);
                     crtc.outputs.push_back(op);
                 }
                 if (n_outputs > 0) {
@@ -245,10 +313,10 @@ namespace schrandr {
         return res;
     }
     
-    std::vector<Monitor> XManager::get_monitors()
+    MonitorSetup XManager::get_monitors()
     {
-        std::vector<Monitor> monitors;
-                
+        std::cout << "get_monitors() ----" << std::endl;
+        MonitorSetup monitor_setup;
         char *output_name;
         
         printf("Number of outputs: %d\n", n_outputs_);
@@ -262,6 +330,7 @@ namespace schrandr {
         xcb_get_atom_name_cookie_t atom_name_cookie;
         xcb_get_atom_name_reply_t *atom_name_reply;
         char *atom_name;
+        int atom_name_length;
         //getting atom content
         xcb_randr_get_output_property_cookie_t property_cookie;
         xcb_randr_get_output_property_reply_t *property_reply;
@@ -297,6 +366,8 @@ namespace schrandr {
                 atom_name_reply = xcb_get_atom_name_reply (
                     xcb_connection_, atom_name_cookie, NULL);
                 atom_name = xcb_get_atom_name_name(atom_name_reply);
+                atom_name_length = xcb_get_atom_name_name_length(atom_name_reply);
+                atom_name[atom_name_length] = '\0';
                 printf("Atom Name: %s\n", atom_name);
                 
                 if (!strcmp(atom_name, "EDID")) {
@@ -321,15 +392,14 @@ namespace schrandr {
                         std::cout << std::setw(2) << std::setfill('0') << std::hex << (int) property_data[i];
                     }
                     std::cout << std::endl;
-                    
-                    monitors.push_back(Monitor(3,4,5,6, Edid(
-                        property_data, property_data_length
-                    )));
+                    monitor_setup.add_edid(
+                        Edid(property_data, property_data_length));
                 }
             }
         }
+        std::cout << "get_monitors() ----" << std::endl;
         
-        return monitors;
+        return monitor_setup;
     }
     
     void XManager::get_next_event()
@@ -374,55 +444,4 @@ namespace schrandr {
         free(ev_);
         }
     }
-    
-//     std::vector<std::string> XManager::get_X_events()
-//     {
-//         std::vector<std::string> events;
-//         char log_buf[BUFFER_SIZE];
-//         char buf[BUFFER_SIZE];
-//         
-//         int (*predicate_)(Display*, XEvent*, XPointer);
-//         predicate_ = &predicate_event_;
-// 
-//         if (XCheckIfEvent(dpy_, &ev_, predicate_, dummy_)) {
-//             XRRScreenResources *resources = XRRGetScreenResources(OCNE(&ev_)->display,
-//                                                                   OCNE(&ev_)->window);
-//             if (resources == NULL) {
-//                 fprintf(stderr, "Could not get screen resources\n");
-//             }
-//             XRROutputInfo *info = XRRGetOutputInfo(OCNE(&ev_)->display, resources,
-//                                                    OCNE(&ev_)->output);
-//             if (info == NULL) {
-//                 XRRFreeScreenResources(resources);
-//                 fprintf(stderr, "Could not get output info\n");
-//             }
-//             snprintf(buf, BUFFER_SIZE, "%s %s", info->name,
-//                      con_actions[info->connection]);
-//             printf("Event: %s %s\n", info->name,
-//                    con_actions[info->connection]);
-//             snprintf(log_buf, BUFFER_SIZE, "Event: %s %s\n", info->name, 
-//                      con_actions[info->connection]);
-//             events.push_back(log_buf);
-//             printf("Time: %lu\n", info->timestamp);
-//             snprintf(log_buf, BUFFER_SIZE, "Time: %lu\n", info->timestamp);
-//             events.push_back(log_buf);
-//             if (info->crtc == 0) {
-//                 printf("Size: %lumm x %lumm\n", info->mm_width, info->mm_height);
-//             }
-//             else {
-//                 printf("CRTC: %lu\n", info->crtc);
-//                 XRRCrtcInfo *crtc = XRRGetCrtcInfo(dpy_, resources, info->crtc);
-//                 if (crtc != NULL) {
-//                     printf("Size: %dx%d\n", crtc->width, crtc->height);
-//                     XRRFreeCrtcInfo(crtc);
-//                 }
-//             }
-//             XRRFreeScreenResources(resources);
-//             XRRFreeOutputInfo(info);
-//         } else {
-//             events.push_back("No XNextEvent");
-//         }
-//         
-//         return events;
-//     }
 }

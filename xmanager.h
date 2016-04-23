@@ -20,7 +20,7 @@ namespace schrandr {
     public:
         XManager();
         ~XManager();
-        std::vector<Monitor> get_monitors();
+        MonitorSetup get_monitors();
         Mode get_mode();
         void set_mode(Mode m);
         void print_screen_info();
@@ -38,6 +38,7 @@ namespace schrandr {
         void get_screens_raw_();
         void get_outputs_raw_();
         void make_window_dummy_();
+        Edid get_edid_(xcb_randr_output_t *output);
                 
         int error_handler_(void);
         //bool has_randr_15_(Display *dpy_);

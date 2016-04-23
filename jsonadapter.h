@@ -14,6 +14,7 @@ namespace schrandr {
     class JSONAdapter {
     public:
         JSONAdapter();
+        MonitorSetup setup_from_json(Json::Value root);
         Json::Value setup_to_json(MonitorSetup ms);
         void write_to_stream(std::stringstream *ofs, Json::Value content);
         void write_to_stream(std::ostream *ofs, Json::Value content);
