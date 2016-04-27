@@ -144,4 +144,28 @@ namespace schrandr {
         root["screens"] = screens;
         return root;
     }
+    
+    std::vector<Mode> JSONAdapter::modes_from_json(Json::Value root)
+    {
+        std::vector<Mode> modes;
+        Json::Value json_modes = root["Known modes"];
+        if(json_modes.isArray()) {
+            for (int i = 0; i < json_modes.size(); i++) {
+                modes.push_back(mode_from_json(json_modes[i]));
+            }
+        }
+        return modes;
+    }
+    
+    Json::Value JSONAdapter::modes_to_json(std::vector<Mode> modes)
+    {
+        Json::Value root;
+        Json::Value json_modes;
+        for(auto const& mode: modes) {
+            json_modes.append(mode_to_json(mode));
+        }
+        root["Known modes"] = json_modes;
+        
+        return root;
+    }
 }   

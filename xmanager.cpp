@@ -10,6 +10,7 @@
 #include "mode.h"
 #include "edid.h"
 #include "monitor_setup.h"
+#include "defs.h"
 
 #define OCNE(X) ((XRROutputChangeNotifyEvent*)X)
 #define BUFFER_SIZE 128
@@ -93,10 +94,9 @@ namespace schrandr {
         xcb_create_window(xcb_connection_, 0, window_dummy_, screens_->root,
                       0, 0, 1, 1, 0, 0, 0, 0, 0);
         xcb_randr_select_input(xcb_connection_, window_dummy_,
-                            XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE |
-                                XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE |
-                                XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE |
-                                XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY);
+                            XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE //89
+                            | XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE //90
+                            );
 
         xcb_flush(xcb_connection_);
     }
@@ -402,38 +402,38 @@ namespace schrandr {
         return monitor_setup;
     }
     
-    void XManager::get_next_event()
+    /** check_for_events()
+     * the response_type for SCREEN_CHANGE is 90 and for
+     * CRTC_CHANGE is 89
+     * A change in modes, such as using xrandr, will yield both SCREEN_CHANGE
+     * and CRTC_CHANGE. (Dis)connecting a monitor will yield only a CRTC_CHANGE.
+     */
+    
+    schrandr_event_t XManager::check_for_events()
     {
-        std::cout << "Debug D1" << std::endl;
+        bool crtc_event = false;
+        bool screen_event = false;
         while ((ev_ = xcb_poll_for_event(xcb_connection_)) != NULL) {
             if (ev_->response_type == 0) {
                 std::cout << "Response type 0" << std::endl;
                 free(ev_);
                 continue;
-             }
-            int type = (ev_->response_type & ~0x7F);
+            }
             std::cout << "Response Type: " << std::to_string(ev_->response_type)
-                << "\nShifted: " << std::to_string(type)
                 << std::endl;
             std::cout << "Screen Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE) << std::endl;
             std::cout << "Output Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE) << std::endl;
             std::cout << "CRTC Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE) << std::endl;
             std::cout << "Property Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY) << std::endl;
-            switch (type) {
-            case XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE: {
+            switch (static_cast<x_event_t>(ev_->response_type)) {
+            case SCREEN_CHANGE: {
                 std::cout << "Screen change" << std::endl;
+                screen_event = true;
                 break;
             }
-            case XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE: {
-                std::cout << "Output change" << std::endl;
-                break;
-            }
-            case XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE: {
+            case CRTC_CHANGE: {
                 std::cout << "CRTC change" << std::endl;
-                break;
-            }
-            case XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY: {
-                std::cout << "Output Property change" << std::endl;
+                crtc_event = true;
                 break;
             }
             default: {
@@ -443,5 +443,11 @@ namespace schrandr {
             }
         free(ev_);
         }
+        if (crtc_event && screen_event)
+            return MODE_EVENT;
+        else if (crtc_event && !screen_event)
+            return CONNECTION_EVENT;
+        else
+            return OTHER_EVENT;
     }
 }

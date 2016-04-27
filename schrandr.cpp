@@ -20,11 +20,8 @@
 #include "logging.h"
 #include "xmanager.h"
 #include "mode.h"
-#include "modemanager.h"
 #include "config.h"
-
-//#include <X11/Xlib.h>
-//#include <X11/extensions/Xrandr.h>
+#include "defs.h"
 
 #include <xcb/xcb.h>
 
@@ -92,6 +89,16 @@ namespace schrandr {
                 "errno = " << err << "." << std::endl;
         }
     }
+    
+    void integrate(std::vector<Mode> modelist, Mode new_mode)
+    {
+        for (auto it = modelist.begin(); it != modelist.end(); it++) {
+            if ((*it).get_monitor_setup() == new_mode.get_monitor_setup()) {
+                modelist.erase(it);
+            }
+        }
+        modelist.push_back(new_mode);
+    }
 }
 
 int main(int argc, char **argv)
@@ -103,7 +110,6 @@ int main(int argc, char **argv)
     int c;
     Logger logger;
     XManager xmanager;
-    MonitorSetup monitor_setup;
     
     std::set_terminate(handle_uncaught);
     
@@ -162,22 +168,50 @@ int main(int argc, char **argv)
         sample_data.push_back("Bananas");
         sample_data.push_back("Apples");
         logger.log(sample_data);
+        
         Config config;
-        ModeManager mode_manager;
-        Mode my_mode = mode_manager.get_current_mode();
-        config.write_mode(my_mode);
-        MonitorSetup foo;
-        foo = xmanager.get_monitors();
-        std::cout << foo.print_setup() << std::endl;
-        //mode_manager.set_mode(config.read_mode());
+        bool something_happened;
+        Mode current_mode = xmanager.get_mode();
+        std::vector<Mode> known_modes;
+        known_modes.push_back(current_mode);
+        config.print_modelist(known_modes);
         
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;
             usleep(loop_duration);
             if (interruption > 0) {
+                config.write_modes(known_modes);
                 break;
             }
-            mode_manager.get_next_event();
+            switch(xmanager.check_for_events()) {
+            case MODE_EVENT: {
+                std::cout << "Mode Event" << std::endl;
+                integrate(known_modes, xmanager.get_mode());
+                break;
+            }
+            case CONNECTION_EVENT: {
+                std::cout << "Output Event" << std::endl;
+                Mode cur_mode = xmanager.get_mode();
+                bool found = false;
+                for (auto it = known_modes.begin(); it != known_modes.end(); it++) {
+                    if ((*it).get_monitor_setup() == cur_mode.get_monitor_setup()) {
+                        xmanager.set_mode(*it);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    integrate(known_modes, cur_mode);
+                }
+                break;
+            }
+            case OTHER_EVENT:
+                std::cout << "Other Event" << std::endl;
+                break;
+            default:
+                std::cout << "Default. WTF!?" << std::endl;
+                break;
+            }
         }
         return EXIT_SUCCESS;
     }

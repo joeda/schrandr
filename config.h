@@ -3,6 +3,7 @@
 
 #include <string>
 #include <json/json.h>
+#include <vector>
 
 #include "mode.h"
 #include "jsonadapter.h"
@@ -12,16 +13,14 @@ namespace schrandr {
     class Config {
     public:
         Config();
-        void write_mode(Mode m);
-        Mode read_mode();
-        void write();
-        void read();
-        void print_all();
+        void write_modes(std::vector<Mode> modes);
+        std::vector<Mode> read_modes();
+        void print_mode(Mode m);
+        void print_modelist(std::vector<Mode> m);
         
     private:
         std::string config_file_path_;
         std::string empty_setups_path_;
-        Json::Value setups_as_json_;
         JSONAdapter json_adapter_;
     };
 } 

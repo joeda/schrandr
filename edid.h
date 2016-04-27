@@ -5,6 +5,11 @@
 
 namespace schrandr {
     
+    enum edid_size_t {
+        EDID_v1 = 128,
+        EDID_v2 = 256
+    };
+    
     class Edid {
     public:
         Edid(

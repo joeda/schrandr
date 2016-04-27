@@ -13,6 +13,7 @@
 
 #include "monitor_setup.h"
 #include "mode.h"
+#include "defs.h"
 
 namespace schrandr {
     
@@ -24,7 +25,7 @@ namespace schrandr {
         Mode get_mode();
         void set_mode(Mode m);
         void print_screen_info();
-        void get_next_event();
+        schrandr_event_t check_for_events();
 
     private:
         xcb_connection_t *xcb_connection_;

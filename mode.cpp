@@ -29,7 +29,7 @@ namespace schrandr {
         return crtcs_;
     }
     
-    MonitorSetup Mode::get_montior_setup()
+    MonitorSetup Mode::get_monitor_setup()
     {
         return monitor_setup_;
     }

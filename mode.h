@@ -41,7 +41,7 @@ namespace schrandr {
         Mode();
         void add_screen(Screen s);
         std::vector<Screen> get_screens();
-        MonitorSetup get_montior_setup();
+        MonitorSetup get_monitor_setup();
         void set_monitor_setup(MonitorSetup s);
     
     private:    
