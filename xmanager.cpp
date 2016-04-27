@@ -307,9 +307,10 @@ namespace schrandr {
                     screen.add_crtc(crtc);
                 }
             }
+            std::cout << "Debug F2" << std::endl;
             res.add_screen(screen);
         }
-        
+        std::cout << "Debug F3" << std::endl;
         return res;
     }
     
@@ -414,6 +415,7 @@ namespace schrandr {
         bool crtc_event = false;
         bool screen_event = false;
         while ((ev_ = xcb_poll_for_event(xcb_connection_)) != NULL) {
+            std::cout << "Debug F1" << std::endl;
             if (ev_->response_type == 0) {
                 std::cout << "Response type 0" << std::endl;
                 free(ev_);

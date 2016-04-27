@@ -92,11 +92,17 @@ namespace schrandr {
     
     void integrate(std::vector<Mode> modelist, Mode new_mode)
     {
-        for (auto it = modelist.begin(); it != modelist.end(); it++) {
+        std::cout << "Debug F4" << std::endl;
+        std::vector<Mode>::iterator it = modelist.begin(); 
+        for ( ; it != modelist.end() ; ) {
+            std::cout << "Debug F6" << std::endl;
             if ((*it).get_monitor_setup() == new_mode.get_monitor_setup()) {
                 modelist.erase(it);
+            } else {
+                ++it;
             }
         }
+        std::cout << "Debug F5" << std::endl;
         modelist.push_back(new_mode);
     }
 }
