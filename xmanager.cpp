@@ -194,17 +194,14 @@ namespace schrandr {
         n_atoms = xcb_randr_list_output_properties_atoms_length(
             output_properties_reply);
         
-        std::cout << "Debug D9" << std::endl;
         for (int atom = 0; atom < n_atoms; atom++) {
             atom_name_cookie = xcb_get_atom_name(
                 xcb_connection_, output_properties_atoms[atom]);
             atom_name_reply = xcb_get_atom_name_reply (
                 xcb_connection_, atom_name_cookie, NULL);
-            std::cout << "Debug D10" << std::endl;
             atom_name = xcb_get_atom_name_name(atom_name_reply);
             atom_name_length = xcb_get_atom_name_name_length(atom_name_reply);
             atom_name[atom_name_length] = '\0';
-            printf("Atom Name: %s\n", atom_name);
             
             if (!strcmp(atom_name, "EDID")) {
                 property_cookie = xcb_randr_get_output_property(
@@ -223,11 +220,6 @@ namespace schrandr {
                 property_data_length = 
                     xcb_randr_get_output_property_data_length(
                         property_reply);
-                std::cout << "EDID: ";
-                for (int i = 0; i < property_data_length; i++) {
-                    std::cout << std::setw(2) << std::setfill('0') << std::hex << (int) property_data[i];
-                }
-                std::cout << std::endl;
                 return Edid(property_data, property_data_length);
             }
         }
@@ -273,8 +265,7 @@ namespace schrandr {
             for (int i = 0; i < n_crtcs; i++) {
                 CRTC crtc;
                 crtc.crtc = crtcs[i];
-                //std::vector<Output> crtc.outputs;
-                std::cout << "Now at CRTC " << std::to_string(crtcs[i]) << std::endl;
+                //std::cout << "Now at CRTC " << std::to_string(crtcs[i]) << std::endl;
                 crtc_info_cookie = xcb_randr_get_crtc_info (
                     xcb_connection_, crtcs[i], XCB_CURRENT_TIME);
                 crtc_info_reply = xcb_randr_get_crtc_info_reply(
@@ -292,9 +283,7 @@ namespace schrandr {
                     name = xcb_randr_get_output_info_name(output_info_reply);
                     n_name = xcb_randr_get_output_info_name_length(output_info_reply);
                     cname = reinterpret_cast<char*>(name);
-                    cname[n_name] = '\0';
-                    printf("Output %i: %s\n", o, cname);
-                    
+                    cname[n_name] = '\0';                    
                     modes = xcb_randr_get_output_info_modes(output_info_reply);
                     n_modes = xcb_randr_get_output_info_modes_length (output_info_reply);
                     op.mode = modes[0];
@@ -307,10 +296,8 @@ namespace schrandr {
                     screen.add_crtc(crtc);
                 }
             }
-            std::cout << "Debug F2" << std::endl;
             res.add_screen(screen);
         }
-        std::cout << "Debug F3" << std::endl;
         return res;
     }
     
@@ -339,7 +326,6 @@ namespace schrandr {
         size_t property_data_length;
         
         for (int output = 0; output < n_outputs_; output++) {
-            printf("Not at output %d\n", output);
             xcb_randr_get_output_info_cookie_t output_info_cookie = xcb_randr_get_output_info(
                 xcb_connection_,
                 outputs_[output],
@@ -368,9 +354,7 @@ namespace schrandr {
                     xcb_connection_, atom_name_cookie, NULL);
                 atom_name = xcb_get_atom_name_name(atom_name_reply);
                 atom_name_length = xcb_get_atom_name_name_length(atom_name_reply);
-                atom_name[atom_name_length] = '\0';
-                printf("Atom Name: %s\n", atom_name);
-                
+                atom_name[atom_name_length] = '\0';                
                 if (!strcmp(atom_name, "EDID")) {
                     property_cookie = xcb_randr_get_output_property(
                         xcb_connection_,
@@ -388,11 +372,6 @@ namespace schrandr {
                     property_data_length = 
                         xcb_randr_get_output_property_data_length(
                             property_reply);
-                    std::cout << "EDID: ";
-                    for (int i = 0; i < property_data_length; i++) {
-                        std::cout << std::setw(2) << std::setfill('0') << std::hex << (int) property_data[i];
-                    }
-                    std::cout << std::endl;
                     monitor_setup.add_edid(
                         Edid(property_data, property_data_length));
                 }
@@ -445,11 +424,15 @@ namespace schrandr {
             }
         free(ev_);
         }
-        if (crtc_event && screen_event)
+        if (crtc_event && screen_event) {
+            std::cout << "Returning MODE_EVENT" << std::endl;
             return MODE_EVENT;
-        else if (crtc_event && !screen_event)
+        } else if (!crtc_event && screen_event) {
+            std::cout << "Returning CONNECTION_EVENT" << std::endl;
             return CONNECTION_EVENT;
-        else
+        } else {
+            std::cout << "Returning OTHER_EVENT" << std::endl;
             return OTHER_EVENT;
+        }
     }
 }

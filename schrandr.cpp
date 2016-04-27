@@ -92,17 +92,14 @@ namespace schrandr {
     
     void integrate(std::vector<Mode> modelist, Mode new_mode)
     {
-        std::cout << "Debug F4" << std::endl;
         std::vector<Mode>::iterator it = modelist.begin(); 
         for ( ; it != modelist.end() ; ) {
-            std::cout << "Debug F6" << std::endl;
             if ((*it).get_monitor_setup() == new_mode.get_monitor_setup()) {
                 modelist.erase(it);
             } else {
                 ++it;
             }
         }
-        std::cout << "Debug F5" << std::endl;
         modelist.push_back(new_mode);
     }
 }
@@ -193,26 +190,34 @@ int main(int argc, char **argv)
             case MODE_EVENT: {
                 std::cout << "Mode Event" << std::endl;
                 integrate(known_modes, xmanager.get_mode());
+                std::cout << "---MODELIST---" << std::endl;
+                config.print_modelist(known_modes);
+                std::cout << "---MODELIST END---\n" << std::endl;
                 break;
             }
             case CONNECTION_EVENT: {
-                std::cout << "Output Event" << std::endl;
+                std::cout << "Connection Event" << std::endl;
                 Mode cur_mode = xmanager.get_mode();
                 bool found = false;
+                std::cout << "Debug F6" << std::endl;
                 for (auto it = known_modes.begin(); it != known_modes.end(); it++) {
                     if ((*it).get_monitor_setup() == cur_mode.get_monitor_setup()) {
+                        std::cout << "Attempting to set mode" << std::endl;
                         xmanager.set_mode(*it);
                         found = true;
                         break;
                     }
                 }
+                std::cout << "Debug F6" << std::endl;
                 if (!found) {
                     integrate(known_modes, cur_mode);
                 }
+                std::cout << "---MODELIST---" << std::endl;
+                config.print_modelist(known_modes);
+                std::cout << "---MODELIST END---\n" << std::endl;
                 break;
             }
             case OTHER_EVENT:
-                std::cout << "Other Event" << std::endl;
                 break;
             default:
                 std::cout << "Default. WTF!?" << std::endl;
