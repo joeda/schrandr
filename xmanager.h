@@ -34,12 +34,13 @@ namespace schrandr {
         int n_outputs_;
         xcb_screen_t *screens_;
         int n_screens_;
-        xcb_generic_event_t *ev_;
+        int screen_;
         
         void get_screens_raw_();
         void get_outputs_raw_();
         void make_window_dummy_();
-        Edid get_edid_(xcb_randr_output_t *output);
+        void refreshAll_();
+        Edid get_edid_(const xcb_randr_output_t &output);
                 
         int error_handler_(void);
         //bool has_randr_15_(Display *dpy_);

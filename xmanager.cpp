@@ -19,7 +19,7 @@ namespace schrandr {
     
     XManager::XManager()
     {
-        xcb_connection_ = xcb_connect (NULL, NULL);
+        xcb_connection_ = xcb_connect(NULL, &screen_);
         get_screens_raw_();
         make_window_dummy_();
         get_outputs_raw_();
@@ -101,6 +101,12 @@ namespace schrandr {
         xcb_flush(xcb_connection_);
     }
     
+    void XManager::refreshAll_()
+    {
+        get_screens_raw_();
+        get_outputs_raw_();
+    }
+    
     void XManager::print_screen_info()
     {
         xcb_randr_get_screen_info_cookie_t screen_info_cookie = 
@@ -168,7 +174,7 @@ namespace schrandr {
         }
     }
     
-    Edid XManager::get_edid_(xcb_randr_output_t *output)
+    Edid XManager::get_edid_(const xcb_randr_output_t &output)
     {
         xcb_atom_t *output_properties_atoms;
         int n_atoms;
@@ -186,14 +192,14 @@ namespace schrandr {
         xcb_randr_list_output_properties_cookie_t output_properties_cookie;
         
         output_properties_cookie = xcb_randr_list_output_properties(
-                xcb_connection_, *output);
+                xcb_connection_, output);
         output_properties_reply = xcb_randr_list_output_properties_reply (
                 xcb_connection_, output_properties_cookie, NULL);
         output_properties_atoms = xcb_randr_list_output_properties_atoms(
             output_properties_reply);
         n_atoms = xcb_randr_list_output_properties_atoms_length(
             output_properties_reply);
-        
+        std::cout << "Gettin some EDID" << std::endl;
         for (int atom = 0; atom < n_atoms; atom++) {
             atom_name_cookie = xcb_get_atom_name(
                 xcb_connection_, output_properties_atoms[atom]);
@@ -206,7 +212,7 @@ namespace schrandr {
             if (!strcmp(atom_name, "EDID")) {
                 property_cookie = xcb_randr_get_output_property(
                     xcb_connection_,
-                    *output,
+                    output,
                     output_properties_atoms[atom],
                     XCB_GET_PROPERTY_TYPE_ANY,
                     0,
@@ -227,35 +233,37 @@ namespace schrandr {
     
     Mode XManager::get_mode()
     {
+        refreshAll_();
         Mode res;
+        int n_screens = 1;
+        const xcb_setup_t *setup = xcb_get_setup(xcb_connection_);
+        xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);  
+
+        for (int i = 0; i < screen_; ++i) {
+            xcb_screen_next(&iter);
+        }
+
+        xcb_screen_t *screens = iter.data;
         
-        for (int s = 0; s < n_screens_; s++) {
+        for (int s = 0; s < n_screens; s++) {
             Screen screen;
-            screen.width = screens_[s].width_in_pixels;
-            screen.height = screens_[s].height_in_pixels;
-            screen.width_mm = screens_[s].width_in_millimeters;
-            screen.height_mm = screens_[s].height_in_millimeters;
-        
-            xcb_randr_mode_t *modes;
-            int n_modes;
+            screen.width = screens[s].width_in_pixels;
+            screen.height = screens[s].height_in_pixels;
+            screen.width_mm = screens[s].width_in_millimeters;
+            screen.height_mm = screens[s].height_in_millimeters;
             
-            xcb_randr_get_screen_resources_current_cookie_t screen_resources_cookie = 
-                xcb_randr_get_screen_resources_current(xcb_connection_, window_dummy_);
-            xcb_randr_get_screen_resources_current_reply_t *screen_resources_reply = 
-                xcb_randr_get_screen_resources_current_reply(
+            xcb_randr_get_screen_resources_cookie_t screen_resources_cookie = 
+                xcb_randr_get_screen_resources(xcb_connection_, window_dummy_);
+            xcb_randr_get_screen_resources_reply_t *screen_resources_reply = 
+                xcb_randr_get_screen_resources_reply(
                     xcb_connection_, screen_resources_cookie, NULL);
             
-            xcb_randr_crtc_t *crtcs 
-                = xcb_randr_get_screen_resources_current_crtcs(screen_resources_reply);
-            int n_crtcs = xcb_randr_get_screen_resources_current_crtcs_length(screen_resources_reply);
+            xcb_randr_crtc_t *crtcs =  
+                xcb_randr_get_screen_resources_crtcs(
+                    screen_resources_reply);
+            int n_crtcs = xcb_randr_get_screen_resources_crtcs_length(
+                screen_resources_reply);
             
-            xcb_randr_get_crtc_info_cookie_t crtc_info_cookie;
-            xcb_randr_get_crtc_info_reply_t *crtc_info_reply;
-            xcb_randr_output_t *outputs;
-            int n_outputs;
-            xcb_randr_get_output_info_cookie_t output_info_cookie;
-            xcb_randr_get_output_info_reply_t *output_info_reply;
-            uint8_t *name;
             char *cname;
             int n_name;
             
@@ -263,41 +271,58 @@ namespace schrandr {
             
             std::cout << "Found " << std::to_string(n_crtcs) << "CRTCs." << std::endl;
             for (int i = 0; i < n_crtcs; i++) {
+                std::cout << "Debug A0" << std::endl;
                 CRTC crtc;
                 crtc.crtc = crtcs[i];
                 //std::cout << "Now at CRTC " << std::to_string(crtcs[i]) << std::endl;
-                crtc_info_cookie = xcb_randr_get_crtc_info (
-                    xcb_connection_, crtcs[i], XCB_CURRENT_TIME);
-                crtc_info_reply = xcb_randr_get_crtc_info_reply(
-                    xcb_connection_, crtc_info_cookie, NULL);
-                outputs = xcb_randr_get_crtc_info_outputs(crtc_info_reply);
-                n_outputs = xcb_randr_get_crtc_info_outputs_length(crtc_info_reply);
+                xcb_randr_get_crtc_info_cookie_t crtc_info_cookie
+                    = xcb_randr_get_crtc_info (
+                        xcb_connection_, crtcs[i], XCB_CURRENT_TIME);
+                xcb_randr_get_crtc_info_reply_t *crtc_info_reply =
+                    xcb_randr_get_crtc_info_reply(
+                        xcb_connection_, crtc_info_cookie, NULL);
+                xcb_randr_output_t *outputs =
+                    xcb_randr_get_crtc_info_outputs(crtc_info_reply);
+                std::cout << "Debug A7" << std::endl;
+                int n_outputs = xcb_randr_get_crtc_info_outputs_length(
+                    crtc_info_reply);
                 std::cout << "This CRTC has " << std::to_string(n_outputs) << " outputs." << std::endl;
                 for (int o = 0; o < n_outputs; o++) {
+                    std::cout << "Debug A1" << std::endl;
                     Output op;
                     op.output = outputs[o];
-                    output_info_cookie = xcb_randr_get_output_info(
-                        xcb_connection_, outputs[o], XCB_CURRENT_TIME);
-                    output_info_reply = xcb_randr_get_output_info_reply(
-                        xcb_connection_, output_info_cookie, XCB_CURRENT_TIME);
-                    name = xcb_randr_get_output_info_name(output_info_reply);
+                    xcb_randr_get_output_info_cookie_t output_info_cookie =
+                        xcb_randr_get_output_info(
+                            xcb_connection_, outputs[o], XCB_CURRENT_TIME);
+                    xcb_randr_get_output_info_reply_t *output_info_reply =
+                        xcb_randr_get_output_info_reply(
+                            xcb_connection_, output_info_cookie, XCB_CURRENT_TIME);
+                    /* char* name = xcb_randr_get_output_info_name(output_info_reply);
                     n_name = xcb_randr_get_output_info_name_length(output_info_reply);
-                    cname = reinterpret_cast<char*>(name);
-                    cname[n_name] = '\0';                    
-                    modes = xcb_randr_get_output_info_modes(output_info_reply);
-                    n_modes = xcb_randr_get_output_info_modes_length (output_info_reply);
+                    cname[n_name] = '\0'; */
+                    std::cout << "Debug A2" << std::endl;
+                    xcb_randr_mode_t * modes =
+                        xcb_randr_get_output_info_modes(output_info_reply);
+                    int n_modes = xcb_randr_get_output_info_modes_length (output_info_reply);
+                    std::cout << "Debug A3" << std::endl;
                     op.mode = modes[0];
                     op.x = crtc_info_reply->x;
                     op.y = crtc_info_reply->y;
-                    op.edid = get_edid_(&outputs[o]);
+                    op.edid = get_edid_(outputs[o]);
                     crtc.outputs.push_back(op);
+                    std::cout << "Debug A4" << std::endl;
                 }
+                std::cout << "Debug A8" << std::endl;
                 if (n_outputs > 0) {
+                    std::cout << "Debug A9" << std::endl;
                     screen.add_crtc(crtc);
+                    std::cout << "Debug A10" << std::endl;
                 }
             }
+            std::cout << "Debug A5" << std::endl;
             res.add_screen(screen);
         }
+        std::cout << "Debug A6" << std::endl;
         return res;
     }
     
@@ -393,20 +418,21 @@ namespace schrandr {
     {
         bool crtc_event = false;
         bool screen_event = false;
-        while ((ev_ = xcb_poll_for_event(xcb_connection_)) != NULL) {
+        xcb_generic_event_t *ev;
+        while ((ev = xcb_poll_for_event(xcb_connection_)) != NULL) {
             std::cout << "Debug F1" << std::endl;
-            if (ev_->response_type == 0) {
+            if (ev->response_type == 0) {
                 std::cout << "Response type 0" << std::endl;
-                free(ev_);
+                free(ev);
                 continue;
             }
-            std::cout << "Response Type: " << std::to_string(ev_->response_type)
+            std::cout << "Response Type: " << std::to_string(ev->response_type)
                 << std::endl;
             std::cout << "Screen Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE) << std::endl;
             std::cout << "Output Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE) << std::endl;
             std::cout << "CRTC Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE) << std::endl;
             std::cout << "Property Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY) << std::endl;
-            switch (static_cast<x_event_t>(ev_->response_type)) {
+            switch (static_cast<x_event_t>(ev->response_type)) {
             case SCREEN_CHANGE: {
                 std::cout << "Screen change" << std::endl;
                 screen_event = true;
@@ -422,7 +448,7 @@ namespace schrandr {
                 break;
             }
             }
-        free(ev_);
+            free(ev);
         }
         if (crtc_event && screen_event) {
             std::cout << "Returning MODE_EVENT" << std::endl;

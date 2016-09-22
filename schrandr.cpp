@@ -208,7 +208,7 @@ int main(int argc, char **argv)
                         break;
                     }
                 }
-                std::cout << "Debug F6" << std::endl;
+                std::cout << "Debug F7" << std::endl;
                 if (!found) {
                     integrate(known_modes, cur_mode);
                 }
