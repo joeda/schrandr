@@ -175,8 +175,11 @@ int main(int argc, char **argv)
         Config config;
         bool something_happened;
         Mode current_mode = xmanager.get_mode();
-        std::vector<Mode> known_modes;
-        known_modes.push_back(current_mode);
+        ModeList known_modes;
+        auto currentMonitorSetup = xmanager.get_monitors();
+        std::map<std::string, Mode> initial;
+        initial[""] = current_mode;
+        known_modes[currentMonitorSetup] = initial;
         config.print_modelist(known_modes);
         
         while (true) {
@@ -189,7 +192,7 @@ int main(int argc, char **argv)
             switch(xmanager.check_for_events()) {
             case MODE_EVENT: {
                 std::cout << "Mode Event" << std::endl;
-                integrate(known_modes, xmanager.get_mode());
+                //integrate(known_modes, xmanager.get_mode());
                 std::cout << "---MODELIST---" << std::endl;
                 config.print_modelist(known_modes);
                 std::cout << "---MODELIST END---\n" << std::endl;
@@ -198,23 +201,22 @@ int main(int argc, char **argv)
             case CONNECTION_EVENT: {
                 std::cout << "Connection Event" << std::endl;
                 Mode cur_mode = xmanager.get_mode();
+                auto monSetup = xmanager.get_monitors();
                 bool found = false;
                 std::cout << "Known modes:" << std::endl;
                 config.print_modelist(known_modes);
                 std::cout << "Current Mode:" << std::endl;
                 config.print_mode(cur_mode);
-                for (auto it = known_modes.begin(); it != known_modes.end(); it++) {
-                    if (it->get_monitor_setup() == cur_mode.get_monitor_setup()) {
-                        std::cout << "Attempting to set mode" << std::endl;
-                        xmanager.set_mode(*it);
-                        found = true;
-                        break;
-                    }
+                auto it = known_modes.find(monSetup);
+                if (it == known_modes.end()) {
+                    std::cout << "Found mode!" << std::endl;
+                } else {
+                    std::cout << "mode not found!" << std::endl;
                 }
                 std::cout << "Debug F7" << std::endl;
-                if (!found) {
+                /* if (!found) {
                     integrate(known_modes, cur_mode);
-                }
+                } */
                 std::cout << "---MODELIST---" << std::endl;
                 config.print_modelist(known_modes);
                 std::cout << "---MODELIST END---\n" << std::endl;

@@ -88,6 +88,31 @@ namespace schrandr {
         }
     }
     
+    bool XManager::get_outputs_raw_(xcb_randr_output_t *outputs, int *n_outputs)
+    {
+        xcb_randr_get_screen_resources_cookie_t screenResCookie;
+        screenResCookie = xcb_randr_get_screen_resources_current(
+            xcb_connection_, window_dummy_);
+
+        //Receive reply from X server
+        xcb_randr_get_screen_resources_reply_t* screenResReply;
+        screenResReply = xcb_randr_get_screen_resources_reply(
+            xcb_connection_, screenResCookie, 0);
+        
+        if(screenResReply) {
+            *n_outputs = 
+                xcb_randr_get_screen_resources_outputs_length(
+                    screenResReply);
+            outputs = 
+                xcb_randr_get_screen_resources_outputs(screenResReply);
+            return true;
+        } else {
+            *n_outputs = 0;
+            outputs = nullptr;
+            return false;
+        }
+    }
+    
     void XManager::make_window_dummy_()
     {
         window_dummy_ = xcb_generate_id(xcb_connection_);
@@ -229,6 +254,35 @@ namespace schrandr {
                 return Edid(property_data, property_data_length);
             }
         }
+        
+        return Edid();
+    }
+    
+    std::vector<std::string> XManager::getAvailableAtoms(
+            const xcb_randr_output_t &output)
+    {
+        std::vector<std::string> res;
+        
+        auto output_properties_cookie = xcb_randr_list_output_properties(
+                xcb_connection_, output);
+        auto output_properties_reply = xcb_randr_list_output_properties_reply (
+                xcb_connection_, output_properties_cookie, NULL);
+        auto output_properties_atoms = xcb_randr_list_output_properties_atoms(
+            output_properties_reply);
+        int n_atoms = xcb_randr_list_output_properties_atoms_length(
+            output_properties_reply);
+        for (int atom = 0; atom < n_atoms; atom++) {
+            auto atom_name_cookie = xcb_get_atom_name(
+                xcb_connection_, output_properties_atoms[atom]);
+            auto atom_name_reply = xcb_get_atom_name_reply (
+                xcb_connection_, atom_name_cookie, NULL);
+            char* atom_name = xcb_get_atom_name_name(atom_name_reply);
+            int atom_name_length = xcb_get_atom_name_name_length(atom_name_reply);
+            atom_name[atom_name_length] = '\0';
+            res.push_back(std::string(atom_name));
+        }
+        
+        return res;
     }
     
     Mode XManager::get_mode()
@@ -291,6 +345,12 @@ namespace schrandr {
                     std::cout << "Debug A1" << std::endl;
                     Output op;
                     op.output = outputs[o];
+                    auto atoms = getAvailableAtoms(outputs[o]);
+                    for (const auto &atom : atoms) {
+                        std::cout << "Atom available in "
+                                  << std::to_string(outputs[o])
+                                  << ": " << atom << std::endl;
+                    }
                     xcb_randr_get_output_info_cookie_t output_info_cookie =
                         xcb_randr_get_output_info(
                             xcb_connection_, outputs[o], XCB_CURRENT_TIME);
@@ -330,78 +390,30 @@ namespace schrandr {
     {
         std::cout << "get_monitors() ----" << std::endl;
         MonitorSetup monitor_setup;
-        char *output_name;
-        
-        printf("Number of outputs: %d\n", n_outputs_);
-        
-        //getting output properties atoms
-        xcb_randr_list_output_properties_cookie_t output_properties_cookie;
-        xcb_randr_list_output_properties_reply_t *output_properties_reply;
-        xcb_atom_t *output_properties_atoms;
-        int n_atoms;
-        //getting atom names
-        xcb_get_atom_name_cookie_t atom_name_cookie;
-        xcb_get_atom_name_reply_t *atom_name_reply;
-        char *atom_name;
-        int atom_name_length;
-        //getting atom content
-        xcb_randr_get_output_property_cookie_t property_cookie;
-        xcb_randr_get_output_property_reply_t *property_reply;
-        uint8_t *property_data;
-        size_t property_data_length;
-        
-        for (int output = 0; output < n_outputs_; output++) {
-            xcb_randr_get_output_info_cookie_t output_info_cookie = xcb_randr_get_output_info(
-                xcb_connection_,
-                outputs_[output],
-                XCB_CURRENT_TIME);
-            xcb_randr_get_output_info_reply_t *output_info =
-                xcb_randr_get_output_info_reply(xcb_connection_,
-                                                output_info_cookie,
-                                                NULL);
-            output_name = strndup((char *) xcb_randr_get_output_info_name(output_info),
-                                  xcb_randr_get_output_info_name_length(output_info));
-            printf("Output Name: %s\n", output_name);
-            
-            output_properties_cookie = xcb_randr_list_output_properties(
-                xcb_connection_, outputs_[output]);
-            output_properties_reply = xcb_randr_list_output_properties_reply (
-                xcb_connection_, output_properties_cookie, NULL);
-            output_properties_atoms = xcb_randr_list_output_properties_atoms(
-                output_properties_reply);
-            n_atoms = xcb_randr_list_output_properties_atoms_length(
-                output_properties_reply);
-            
-            for (int atom = 0; atom < n_atoms; atom++) {
-                atom_name_cookie = xcb_get_atom_name(
-                    xcb_connection_, output_properties_atoms[atom]);
-                atom_name_reply = xcb_get_atom_name_reply (
-                    xcb_connection_, atom_name_cookie, NULL);
-                atom_name = xcb_get_atom_name_name(atom_name_reply);
-                atom_name_length = xcb_get_atom_name_name_length(atom_name_reply);
-                atom_name[atom_name_length] = '\0';                
-                if (!strcmp(atom_name, "EDID")) {
-                    property_cookie = xcb_randr_get_output_property(
-                        xcb_connection_,
-                        outputs_[output],
-                        output_properties_atoms[atom],
-                        XCB_GET_PROPERTY_TYPE_ANY,
-                        0,
-                        100,
-                        0,
-                        0);
-                    property_reply = xcb_randr_get_output_property_reply(
-                        xcb_connection_, property_cookie, NULL);
-                    property_data = xcb_randr_get_output_property_data(
-                        property_reply);
-                    property_data_length = 
-                        xcb_randr_get_output_property_data_length(
-                            property_reply);
-                    monitor_setup.add_edid(
-                        Edid(property_data, property_data_length));
-                }
+        int n_outputs;
+        xcb_randr_output_t *outputs;
+        if (!get_outputs_raw_(outputs, &n_outputs)) {}
+            return monitor_setup;
+        }
+        printf("Number of outputs: %d\n", n_outputs);
+        for (int i = 0; i < n_outputs; ++i) {
+            // check if a device is connected
+            auto outputInfoCookie = xcb_randr_get_output_info(
+                xcb_connection_, outputs[i], XCB_CURRENT_TIME);
+            xcb_randr_get_output_info_reply_t *reply = 
+                xcb_randr_get_output_info_reply(xcb_connection_, reply, nullptr);
+            char *output_name;
+            output_name = strndup((char *) xcb_randr_get_output_info_name(reply),
+                                  xcb_randr_get_output_info_name_length(reply));
+            printf("Output Name: %s\n", output_name)
+            std::cout << "Output Status: " << std::to_string(reply->connection)
+                      << std::endl;
+            Edid curEdid = get_edid_(outputs[i]);
+            if (!curEdid.isDummy()) {
+                monitor_setup.add_edid(curEdid);
             }
         }
+        
         std::cout << "get_monitors() ----" << std::endl;
         
         return monitor_setup;

@@ -21,6 +21,7 @@ namespace schrandr {
         std::string to_string()const;
         void set_edid(std::string edid);
         void set_edid(uint8_t *edid, size_t array_length);
+        bool isEmpty();
     private:
         std::string edid_;
         size_t array_length_;

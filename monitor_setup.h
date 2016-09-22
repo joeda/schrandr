@@ -32,6 +32,11 @@ namespace schrandr {
     {
         return !operator==(lhs,rhs);
     };
+    
+    inline bool operator<(const MonitorSetup &lhs, const MonitorSetup &rhs)
+    {
+        return (lhs.get_edids() < rhs.get_edids());
+    }
 } 
 
 #endif

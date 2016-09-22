@@ -13,10 +13,10 @@ namespace schrandr {
     class Config {
     public:
         Config();
-        void write_modes(std::vector<Mode> modes);
-        std::vector<Mode> read_modes();
+        void write_modes(const ModeList &modes);
+        ModeList read_modes();
         void print_mode(Mode m);
-        void print_modelist(std::vector<Mode> m);
+        void print_modelist(const ModeList &modes);
         
     private:
         std::string config_file_path_;

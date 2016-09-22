@@ -8,19 +8,18 @@
 #include <vector>
 
 #include "monitor_setup.h"
-
+#include "defs.h"
 
 namespace schrandr {
     
     class JSONAdapter {
     public:
-        JSONAdapter();
         MonitorSetup setup_from_json(Json::Value root);
         Json::Value setup_to_json(MonitorSetup ms);
         Mode mode_from_json(Json::Value root);
         Json::Value mode_to_json(Mode m);
-        std::vector<Mode> modes_from_json(Json::Value root);
-        Json::Value modes_to_json(std::vector<Mode> modes);
+        ModeList modesFromJson(const Json::Value &root);
+        Json::Value modesToJson(const ModeList &modes);
         
         Json::Value read_stream(std::ifstream *str);
         void write_to_stream(std::stringstream *ofs, Json::Value content);

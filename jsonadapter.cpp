@@ -5,12 +5,9 @@
 #include "config.h"
 #include "mode.h"
 #include "edid.h"
+#include "defs.h"
 
 namespace schrandr {
-    
-    JSONAdapter::JSONAdapter()
-    {
-    }
 
     void JSONAdapter::write_to_stream(std::stringstream *ofs, Json::Value content)
     {
@@ -145,24 +142,46 @@ namespace schrandr {
         return root;
     }
     
-    std::vector<Mode> JSONAdapter::modes_from_json(Json::Value root)
+    ModeList JSONAdapter::modesFromJson(const Json::Value &root)
     {
-        std::vector<Mode> modes;
+        ModeList modes;
         Json::Value json_modes = root["Known modes"];
         if(json_modes.isArray()) {
             for (int i = 0; i < json_modes.size(); i++) {
-                modes.push_back(mode_from_json(json_modes[i]));
+                Json::Value monitorSetup = json_modes[i];
+                MonitorSetup key;
+                for (int j = 0; j < monitorSetup["connectedEDIDs"].size(); ++j) {
+                    key.add_edid(Edid(monitorSetup["connectedEDIDs"][j].asString()));
+                }
+                std::map<std::string, Mode> value;
+                for (int j = 0; j < monitorSetup["modes"].size(); ++j) {
+                    auto name = monitorSetup["modes"][j]["name"].asString();
+                    Mode mode = mode_from_json(monitorSetup["modes"][j]["mode"]);
+                    value[name] = mode;
+                }
+                modes[key] = value;
             }
         }
         return modes;
     }
     
-    Json::Value JSONAdapter::modes_to_json(std::vector<Mode> modes)
+    Json::Value JSONAdapter::modesToJson(const ModeList &modes)
     {
         Json::Value root;
         Json::Value json_modes;
-        for(auto const& mode: modes) {
-            json_modes.append(mode_to_json(mode));
+        for(const auto &mode: modes) {
+            Json::Value jsonMonitorSetup;
+            for (const auto &edid : mode.first.get_edids()) {
+                jsonMonitorSetup["connectedEDIDs"].append(
+                    Json::Value(edid.to_string()));
+            }
+            for (const auto &namedMode : mode.second) {
+                Json::Value jsonNamedMode;
+                jsonNamedMode["name"] = namedMode.first;
+                jsonNamedMode["mode"] = mode_to_json(namedMode.second);
+                jsonMonitorSetup["modes"].append(jsonNamedMode);
+            }
+            json_modes.append(jsonMonitorSetup);
         }
         root["Known modes"] = json_modes;
         

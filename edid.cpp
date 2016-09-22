@@ -43,7 +43,7 @@ namespace schrandr {
         array_length_ = edid.size() * 2;
     }
     
-     void Edid::set_edid(uint8_t *edid, size_t array_length)
+    void Edid::set_edid(uint8_t *edid, size_t array_length)
     {
         if (array_length != array_length_) {
             std::cout << "Invalid EDID!" << std::endl;
@@ -54,6 +54,11 @@ namespace schrandr {
             oss << std::setw(2) << std::setfill('0') << std::hex << (int) edid[i];
         }
         edid_ = oss.str();
+    }
+    
+    bool isDummy()
+    {
+        return edid_.empty();
     }
 } 
  
