@@ -199,9 +199,12 @@ int main(int argc, char **argv)
                 std::cout << "Connection Event" << std::endl;
                 Mode cur_mode = xmanager.get_mode();
                 bool found = false;
-                std::cout << "Debug F6" << std::endl;
+                std::cout << "Known modes:" << std::endl;
+                config.print_modelist(known_modes);
+                std::cout << "Current Mode:" << std::endl;
+                config.print_mode(cur_mode);
                 for (auto it = known_modes.begin(); it != known_modes.end(); it++) {
-                    if ((*it).get_monitor_setup() == cur_mode.get_monitor_setup()) {
+                    if (it->get_monitor_setup() == cur_mode.get_monitor_setup()) {
                         std::cout << "Attempting to set mode" << std::endl;
                         xmanager.set_mode(*it);
                         found = true;

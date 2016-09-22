@@ -46,7 +46,6 @@ namespace schrandr {
     
     private:    
         std::vector<Screen> screens_;
-        MonitorSetup monitor_setup_;
     };
 } 
 

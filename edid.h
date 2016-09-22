@@ -30,6 +30,11 @@ namespace schrandr {
     {
         return lhs.to_string().compare(rhs.to_string());
     };
+    
+    inline bool operator<(const Edid& lhs, const Edid& rhs)
+    {
+        return (lhs.to_string().compare(rhs.to_string()) < 0);
+    };
 } 
 
 #endif

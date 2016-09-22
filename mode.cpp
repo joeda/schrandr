@@ -31,12 +31,17 @@ namespace schrandr {
     
     MonitorSetup Mode::get_monitor_setup()
     {
-        return monitor_setup_;
-    }
-    
-    void Mode::set_monitor_setup(MonitorSetup s)
-    {
-        monitor_setup_ = s;
+        MonitorSetup res;
+        for (const auto &screen : screens_) {
+            for (const auto &crtc : screen.get_crtcs()) {
+                for (const auto &output : crtc.outputs) {
+                    if (!output.edid.to_string().empty()) {
+                        res.add_edid(output.edid);
+                    }
+                }
+            }
+        }
+        return res;
     }
 }
 
