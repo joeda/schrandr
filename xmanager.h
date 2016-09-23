@@ -27,6 +27,7 @@ namespace schrandr {
         void print_screen_info();
         schrandr_event_t check_for_events();
         std::vector<xcb_randr_output_t> getConnectedOutputs();
+        bool disableOutput(const xcb_randr_output_t &output);
 
     private:
         xcb_connection_t *xcb_connection_;
@@ -45,7 +46,8 @@ namespace schrandr {
         Edid get_edid_(const xcb_randr_output_t &output);
         std::vector<std::string> getAvailableAtoms(
             const xcb_randr_output_t &output);
-                
+        std::vector<xcb_randr_crtc_t>
+            getCrtcsByOutput_(const xcb_randr_output_t &output);
         int error_handler_(void);
         //bool has_randr_15_(Display *dpy_);
     };

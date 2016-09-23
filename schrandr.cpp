@@ -216,8 +216,7 @@ int main(int argc, char **argv)
                 std::cout << "---MODELIST---" << std::endl;
                 config.print_modelist(known_modes);
                 std::cout << "---MODELIST END---\n" << std::endl;
-                break;
-            }
+            } break;
             case CONNECTION_EVENT: {
                 std::cout << "Connection Event" << std::endl;
                 auto monSetup = xmanager.get_monitors();
@@ -237,10 +236,14 @@ int main(int argc, char **argv)
                     for (const auto &conn : diff.second) {
                         std::cout << "disconnected: " << std::to_string(conn)
                                 << std::endl;
+                        xmanager.disableOutput(conn);
                     }
+                    auto m = xmanager.get_mode();
+                    std::cout << "POST (DIS)CONNECTION----" << std::endl;
+                    config.print_mode(m);
+                    std::cout << "POST (DIS)CONNECTION----" << std::endl;
                 }
-                break;
-            }
+            } break;
             case OTHER_EVENT:
                 break;
             default:

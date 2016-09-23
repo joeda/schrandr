@@ -164,6 +164,23 @@ namespace schrandr {
         return res;
     }
     
+    std::vector<xcb_randr_crtc_t>
+    XManager::getCrtcsByOutput_(const xcb_randr_output_t &output)
+    {
+        std::vector<xcb_randr_crtc_t> res;
+        auto cookie = xcb_randr_get_output_info(
+            xcb_connection_, output, XCB_CURRENT_TIME);
+        auto reply = xcb_randr_get_output_info_reply(
+            xcb_connection_, cookie, nullptr);
+        xcb_randr_crtc_t *crtcs = xcb_randr_get_output_info_crtcs(reply);
+        int nCrtcs = xcb_randr_get_output_info_crtcs_length(reply);
+        for (int i = 0; i < nCrtcs; ++i) {
+            res.push_back(crtcs[i]);
+        }
+        
+        return res;
+    }
+    
     void XManager::print_screen_info()
     {
         xcb_randr_get_screen_info_cookie_t screen_info_cookie = 
@@ -450,6 +467,36 @@ namespace schrandr {
      * A change in modes, such as using xrandr, will yield both SCREEN_CHANGE
      * and CRTC_CHANGE. (Dis)connecting a monitor will yield only a CRTC_CHANGE.
      */
+    bool XManager::disableOutput(const xcb_randr_output_t &output)
+    {
+        auto crtcsToDisable = getCrtcsByOutput_(output);
+        if (crtcsToDisable.empty()) {
+            return false;
+        }
+        xcb_randr_crtc_t crtc = crtcsToDisable.front();
+        xcb_randr_output_t outputCopy[1] = {output};
+        
+        std::cout << "CRTC to disable: " << crtc << std::endl;
+        std::cout << "Output to disable: " << outputCopy[0] << std::endl;
+        auto cookie = xcb_randr_set_crtc_config(
+            xcb_connection_,
+            crtc,
+            XCB_CURRENT_TIME,
+            XCB_CURRENT_TIME,
+            1, //x
+            1, //y
+            0, //Mode 
+            XCB_RANDR_ROTATION_ROTATE_0, //rotation
+            0, //outputs_len
+            nullptr); //ptr to outputs
+        auto reply = xcb_randr_set_crtc_config_reply(
+            xcb_connection_, cookie, nullptr);
+        std::cout << "disableOutpt response: " << std::to_string(reply->response_type)
+                  << std::endl;
+        std::cout << "disableOutpt status: " << std::to_string(reply->status)
+                  << std::endl;
+        return true;
+    }
     
     schrandr_event_t XManager::check_for_events()
     {
