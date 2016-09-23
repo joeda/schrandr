@@ -44,4 +44,3 @@ namespace schrandr {
         return res;
     }
 }
-

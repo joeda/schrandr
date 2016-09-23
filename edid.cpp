@@ -56,7 +56,7 @@ namespace schrandr {
         edid_ = oss.str();
     }
     
-    bool isDummy()
+    bool Edid::isDummy()
     {
         return edid_.empty();
     }

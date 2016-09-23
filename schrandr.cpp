@@ -102,6 +102,26 @@ namespace schrandr {
         }
         modelist.push_back(new_mode);
     }
+    
+    std::pair<std::vector<xcb_randr_output_t>, std::vector<xcb_randr_output_t> >
+    compareConnectedOutputs(const std::vector<xcb_randr_output_t> &pre,
+        const std::vector<xcb_randr_output_t> &current)
+    {
+        std::vector<xcb_randr_output_t> disconnected;
+        std::vector<xcb_randr_output_t> connected;
+        for (const auto &conn : pre) {
+            if (std::find(current.begin(), current.end(), conn) == current.end()) {
+                disconnected.push_back(conn);
+            }
+        }
+        for (const auto &conn : current) {
+            if (std::find(pre.begin(), pre.end(), conn) == pre.end()) {
+                connected.push_back(conn);
+            }
+        }
+        
+        return std::make_pair(connected, disconnected);
+    }
 }
 
 int main(int argc, char **argv)
@@ -177,10 +197,10 @@ int main(int argc, char **argv)
         Mode current_mode = xmanager.get_mode();
         ModeList known_modes;
         auto currentMonitorSetup = xmanager.get_monitors();
-        std::map<std::string, Mode> initial;
-        initial[""] = current_mode;
-        known_modes[currentMonitorSetup] = initial;
-        config.print_modelist(known_modes);
+
+        known_modes.addNamedMode(currentMonitorSetup, current_mode, "");
+        //config.print_modelist(known_modes);
+        auto connectedOutputs = xmanager.getConnectedOutputs();
         
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;
@@ -200,26 +220,25 @@ int main(int argc, char **argv)
             }
             case CONNECTION_EVENT: {
                 std::cout << "Connection Event" << std::endl;
-                Mode cur_mode = xmanager.get_mode();
                 auto monSetup = xmanager.get_monitors();
-                bool found = false;
-                std::cout << "Known modes:" << std::endl;
-                config.print_modelist(known_modes);
-                std::cout << "Current Mode:" << std::endl;
-                config.print_mode(cur_mode);
-                auto it = known_modes.find(monSetup);
-                if (it == known_modes.end()) {
-                    std::cout << "Found mode!" << std::endl;
-                } else {
-                    std::cout << "mode not found!" << std::endl;
+                auto pastConn = connectedOutputs;
+                connectedOutputs = xmanager.getConnectedOutputs();
+                auto diff = compareConnectedOutputs(pastConn, connectedOutputs);
+                if (known_modes.isMonitorSetupConfigured(monSetup)) {
+                    Mode toSet = known_modes.getAnyMode(monSetup);
+                    std::cout << "Attempting to set mode" << std::endl;
+                    xmanager.set_mode(toSet);
                 }
-                std::cout << "Debug F7" << std::endl;
-                /* if (!found) {
-                    integrate(known_modes, cur_mode);
-                } */
-                std::cout << "---MODELIST---" << std::endl;
-                config.print_modelist(known_modes);
-                std::cout << "---MODELIST END---\n" << std::endl;
+                else {
+                    for (const auto &conn : diff.first) {
+                        std::cout << "Connected: " << std::to_string(conn)
+                                << std::endl;
+                    }
+                    for (const auto &conn : diff.second) {
+                        std::cout << "disconnected: " << std::to_string(conn)
+                                << std::endl;
+                    }
+                }
                 break;
             }
             case OTHER_EVENT:

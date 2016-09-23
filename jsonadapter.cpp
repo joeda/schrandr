@@ -153,13 +153,11 @@ namespace schrandr {
                 for (int j = 0; j < monitorSetup["connectedEDIDs"].size(); ++j) {
                     key.add_edid(Edid(monitorSetup["connectedEDIDs"][j].asString()));
                 }
-                std::map<std::string, Mode> value;
                 for (int j = 0; j < monitorSetup["modes"].size(); ++j) {
                     auto name = monitorSetup["modes"][j]["name"].asString();
                     Mode mode = mode_from_json(monitorSetup["modes"][j]["mode"]);
-                    value[name] = mode;
+                    modes.addNamedMode(key, mode, name);
                 }
-                modes[key] = value;
             }
         }
         return modes;
@@ -169,7 +167,7 @@ namespace schrandr {
     {
         Json::Value root;
         Json::Value json_modes;
-        for(const auto &mode: modes) {
+        for(const auto &mode: modes.getModeList()) {
             Json::Value jsonMonitorSetup;
             for (const auto &edid : mode.first.get_edids()) {
                 jsonMonitorSetup["connectedEDIDs"].append(

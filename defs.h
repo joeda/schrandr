@@ -17,8 +17,6 @@ namespace schrandr {
         SCREEN_CHANGE = 89,
         CRTC_CHANGE = 90
     };
-    
-    typedef std::map<MonitorSetup, std::map<std::string, Mode> > ModeList;
 }
 
 #endif

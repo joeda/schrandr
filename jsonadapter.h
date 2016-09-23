@@ -8,10 +8,13 @@
 #include <vector>
 
 #include "monitor_setup.h"
-#include "defs.h"
+#include "mode.h"
+#include "config.h"
 
 namespace schrandr {
     
+    class ModeList;
+        
     class JSONAdapter {
     public:
         MonitorSetup setup_from_json(Json::Value root);

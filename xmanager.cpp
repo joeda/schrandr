@@ -88,10 +88,10 @@ namespace schrandr {
         }
     }
     
-    bool XManager::get_outputs_raw_(xcb_randr_output_t *outputs, int *n_outputs)
+    bool XManager::get_outputs_raw_(xcb_randr_output_t **outputs, int *n_outputs)
     {
         xcb_randr_get_screen_resources_cookie_t screenResCookie;
-        screenResCookie = xcb_randr_get_screen_resources_current(
+        screenResCookie = xcb_randr_get_screen_resources(
             xcb_connection_, window_dummy_);
 
         //Receive reply from X server
@@ -103,12 +103,12 @@ namespace schrandr {
             *n_outputs = 
                 xcb_randr_get_screen_resources_outputs_length(
                     screenResReply);
-            outputs = 
+            *outputs = 
                 xcb_randr_get_screen_resources_outputs(screenResReply);
             return true;
         } else {
             *n_outputs = 0;
-            outputs = nullptr;
+            *outputs = nullptr;
             return false;
         }
     }
@@ -130,6 +130,38 @@ namespace schrandr {
     {
         get_screens_raw_();
         get_outputs_raw_();
+    }
+    
+    std::vector<xcb_randr_output_t> XManager::getConnectedOutputs()
+    {
+        std::vector<xcb_randr_output_t> res;
+        int n_outputs;
+        xcb_randr_output_t *outputs;
+        if (!get_outputs_raw_(&outputs, &n_outputs)) {
+            return res;
+        }
+        for (int i = 0; i < n_outputs; ++i) {
+            // check if a device is connected
+            auto outputInfoCookie = xcb_randr_get_output_info(
+                xcb_connection_, outputs[i], XCB_CURRENT_TIME);
+            xcb_randr_get_output_info_reply_t *reply = 
+                xcb_randr_get_output_info_reply(
+                    xcb_connection_, outputInfoCookie, nullptr);
+            switch(reply->connection) {
+            case XCB_RANDR_CONNECTION_CONNECTED:
+                res.push_back(outputs[i]);
+                break;
+            case XCB_RANDR_CONNECTION_DISCONNECTED:
+                break;
+            case XCB_RANDR_CONNECTION_UNKNOWN:
+                std::cout << "Connection status unknown?" << std::endl;
+                break;
+            default:
+                std::cout << "Something went seriously wrong" << std::endl;
+            }
+        }
+        
+        return res;
     }
     
     void XManager::print_screen_info()
@@ -224,7 +256,6 @@ namespace schrandr {
             output_properties_reply);
         n_atoms = xcb_randr_list_output_properties_atoms_length(
             output_properties_reply);
-        std::cout << "Gettin some EDID" << std::endl;
         for (int atom = 0; atom < n_atoms; atom++) {
             atom_name_cookie = xcb_get_atom_name(
                 xcb_connection_, output_properties_atoms[atom]);
@@ -325,7 +356,6 @@ namespace schrandr {
             
             std::cout << "Found " << std::to_string(n_crtcs) << "CRTCs." << std::endl;
             for (int i = 0; i < n_crtcs; i++) {
-                std::cout << "Debug A0" << std::endl;
                 CRTC crtc;
                 crtc.crtc = crtcs[i];
                 //std::cout << "Now at CRTC " << std::to_string(crtcs[i]) << std::endl;
@@ -337,12 +367,10 @@ namespace schrandr {
                         xcb_connection_, crtc_info_cookie, NULL);
                 xcb_randr_output_t *outputs =
                     xcb_randr_get_crtc_info_outputs(crtc_info_reply);
-                std::cout << "Debug A7" << std::endl;
                 int n_outputs = xcb_randr_get_crtc_info_outputs_length(
                     crtc_info_reply);
                 std::cout << "This CRTC has " << std::to_string(n_outputs) << " outputs." << std::endl;
                 for (int o = 0; o < n_outputs; o++) {
-                    std::cout << "Debug A1" << std::endl;
                     Output op;
                     op.output = outputs[o];
                     auto atoms = getAvailableAtoms(outputs[o]);
@@ -360,29 +388,21 @@ namespace schrandr {
                     /* char* name = xcb_randr_get_output_info_name(output_info_reply);
                     n_name = xcb_randr_get_output_info_name_length(output_info_reply);
                     cname[n_name] = '\0'; */
-                    std::cout << "Debug A2" << std::endl;
                     xcb_randr_mode_t * modes =
                         xcb_randr_get_output_info_modes(output_info_reply);
                     int n_modes = xcb_randr_get_output_info_modes_length (output_info_reply);
-                    std::cout << "Debug A3" << std::endl;
                     op.mode = modes[0];
                     op.x = crtc_info_reply->x;
                     op.y = crtc_info_reply->y;
                     op.edid = get_edid_(outputs[o]);
                     crtc.outputs.push_back(op);
-                    std::cout << "Debug A4" << std::endl;
                 }
-                std::cout << "Debug A8" << std::endl;
                 if (n_outputs > 0) {
-                    std::cout << "Debug A9" << std::endl;
                     screen.add_crtc(crtc);
-                    std::cout << "Debug A10" << std::endl;
                 }
             }
-            std::cout << "Debug A5" << std::endl;
             res.add_screen(screen);
         }
-        std::cout << "Debug A6" << std::endl;
         return res;
     }
     
@@ -392,7 +412,7 @@ namespace schrandr {
         MonitorSetup monitor_setup;
         int n_outputs;
         xcb_randr_output_t *outputs;
-        if (!get_outputs_raw_(outputs, &n_outputs)) {}
+        if (!get_outputs_raw_(&outputs, &n_outputs)) {
             return monitor_setup;
         }
         printf("Number of outputs: %d\n", n_outputs);
@@ -401,16 +421,21 @@ namespace schrandr {
             auto outputInfoCookie = xcb_randr_get_output_info(
                 xcb_connection_, outputs[i], XCB_CURRENT_TIME);
             xcb_randr_get_output_info_reply_t *reply = 
-                xcb_randr_get_output_info_reply(xcb_connection_, reply, nullptr);
-            char *output_name;
-            output_name = strndup((char *) xcb_randr_get_output_info_name(reply),
-                                  xcb_randr_get_output_info_name_length(reply));
-            printf("Output Name: %s\n", output_name)
-            std::cout << "Output Status: " << std::to_string(reply->connection)
-                      << std::endl;
-            Edid curEdid = get_edid_(outputs[i]);
-            if (!curEdid.isDummy()) {
+                xcb_randr_get_output_info_reply(
+                    xcb_connection_, outputInfoCookie, nullptr);
+            switch(reply->connection) {
+            case XCB_RANDR_CONNECTION_CONNECTED: {
+                Edid curEdid = get_edid_(outputs[i]);
                 monitor_setup.add_edid(curEdid);
+            } break;
+            case XCB_RANDR_CONNECTION_DISCONNECTED:
+                break;
+            case XCB_RANDR_CONNECTION_UNKNOWN: {
+                std::cout << "Connection status unknown?" << std::endl;
+            } break;
+            default: {
+                std::cout << "Something went seriously wrong" << std::endl;
+            } break;
             }
         }
         

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <exception>
 
 #include "config.h"
 #include "mode.h"
@@ -43,5 +44,47 @@ namespace schrandr {
     {
         json_adapter_.write_to_stream(
             &std::cout ,json_adapter_.modesToJson(modes));
+    }
+    
+    ModeList::ModeList(const ModeList::modeListMap_t &list) {
+        modeList_ = list;
+    }
+    
+    bool ModeList::addMode(const MonitorSetup &ms, const Mode &mode) {
+        if (modeList_.find(ms)!= modeList_.end()) {
+            return false;
+        }
+        modeList_[ms] = std::map<std::string, Mode>({{"", mode}});
+    }
+    
+    bool ModeList::isMonitorSetupConfigured(const MonitorSetup &ms) const {
+        return modeList_.find(ms) != modeList_.end();
+    }
+    
+    std::map<std::string, Mode> ModeList::getModes(const MonitorSetup &ms) const {
+        if (modeList_.find(ms) == modeList_.end()) {
+            std::map<std::string, Mode> m;
+            return m;
+        }
+        return modeList_.at(ms);
+    }
+    
+    Mode ModeList::getAnyMode(const MonitorSetup &ms) const {
+        if (modeList_.find(ms) == modeList_.end()) {
+            throw std::runtime_error("MonitorSetup not found");
+        }
+        for (const auto &modeMap : modeList_.at(ms)) {
+            return modeMap.second;
+        }
+    }
+    
+    ModeList::modeListMap_t ModeList::getModeList() const {
+        return modeList_;
+    }
+    
+    bool ModeList::addNamedMode(const MonitorSetup &ms, const Mode &mode,
+            const std::string &name)
+    {
+        modeList_[ms][name] = mode;
     }
 }  
