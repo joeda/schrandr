@@ -42,10 +42,13 @@ namespace schrandr {
     public:
         Mode();
         void add_screen(Screen s);
-        std::vector<Screen> get_screens();
-        MonitorSetup get_monitor_setup();
+        std::vector<Screen> get_screens() const;
+        MonitorSetup get_monitor_setup() const;
         void set_monitor_setup(MonitorSetup s);
         int eraseCrtc(const xcb_randr_crtc_t &crtc);
+        Output getOutputByEdid(const Edid &edid) const;
+        std::vector<Output> getActiveOutputs() const;
+
     
     private:    
         std::vector<Screen> screens_;

@@ -239,7 +239,7 @@ int main(int argc, char **argv)
                 if (known_modes.isMonitorSetupConfigured(monSetup)) {
                     Mode toSet = known_modes.getAnyMode(monSetup);
                     std::cout << "Attempting to set mode" << std::endl;
-                    xmanager.set_mode(toSet);
+                    xmanager.set_mode(xmanager.get_mode(), toSet);
                 }
                 else {
                     for (const auto &conn : diff.second) {

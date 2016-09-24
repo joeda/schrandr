@@ -11,6 +11,7 @@
 #include "edid.h"
 #include "monitor_setup.h"
 #include "defs.h"
+#include "util.h"
 
 #define OCNE(X) ((XRROutputChangeNotifyEvent*)X)
 #define BUFFER_SIZE 128
@@ -230,6 +231,25 @@ namespace schrandr {
         return res;
     }
     
+    std::map<Edid, xcb_randr_output_t> XManager::getOuputsByEdid_()
+    {
+        std::map<Edid, xcb_randr_output_t> res;
+        
+        auto cookie = xcb_randr_get_screen_resources(xcb_connection_, window_dummy_);
+        auto reply = xcb_randr_get_screen_resources_reply(
+            xcb_connection_, cookie, nullptr);
+        xcb_randr_output_t *outputs = xcb_randr_get_screen_resources_outputs(reply);
+        int nOutputs = xcb_randr_get_screen_resources_outputs_length(reply);
+        for (int i = 0; i < nOutputs; ++i) {
+            Edid edid = get_edid_(outputs[i]);
+            if (!edid.to_string().empty()) {
+                res[edid] = outputs[i];
+            }
+        }
+        
+        return res;
+    }
+    
     std::vector<xcb_randr_mode_t>
     XManager::getAvailableModesFromOutput(const xcb_randr_output_t &output)
     {
@@ -300,34 +320,84 @@ namespace schrandr {
         
     }
     
-    void XManager::set_mode(Mode m)
+    void XManager::set_mode(const Mode &current, const Mode &target)
     {
-        for(auto const& screen: m.get_screens()) {
+        auto rawOutputsByEdid = getOuputsByEdid_();
+        auto outputsCurrent = current.getActiveOutputs();
+        auto outputsTarget = target.getActiveOutputs();
+        std::vector<Edid> edidsCurrent, edidsTarget;
+        for (const auto &output : outputsCurrent) {
+            edidsCurrent.push_back(output.edid);
+        }
+        for (const auto &output : outputsTarget) {
+            edidsTarget.push_back(output.edid);
+        }
+        auto edidDiff = util::compareVectors(edidsCurrent, edidsTarget);
+        auto edidsKept = util::intersect(edidsCurrent, edidsTarget);
+        std::vector<Output> toDisable, toChange;
+        for (const auto &edid : edidDiff.second) {
+            toDisable.push_back(current.getOutputByEdid(edid));
+        }
+        for (const auto &edid : edidDiff.first) {
+            auto op = target.getOutputByEdid(edid);
+            op.output = rawOutputsByEdid[edid];
+            auto availableModes = getAvailableModesFromOutput(op.output);
+            if (std::find(availableModes.begin(), availableModes.end(), op.mode)
+                != availableModes.end())
+            {
+                op.mode = availableModes.front();
+                std::cout << "WARNING: mode not available" << std::endl;
+            }
+            toChange.push_back(op);
+        }
+        for (const auto &edid : edidsKept) {
+            auto opNew = target.getOutputByEdid(edid);
+            auto opOld = current.getOutputByEdid(edid);
+            if (!((opNew.mode == opOld.mode) && (opNew.x == opOld.x)
+                && (opNew.y == opOld.y)))
+            {
+                opNew.output = rawOutputsByEdid[edid];
+                auto availableModes = getAvailableModesFromOutput(opNew.output);
+                if (std::find(availableModes.begin(), availableModes.end(),
+                    opNew.mode) != availableModes.end())
+                {
+                    opNew.mode = availableModes.front();
+                    std::cout << "WARNING: mode not available" << std::endl;
+                }
+                toChange.push_back(opNew);
+            }
+        }
+        
+        for (const auto &op : toDisable) {
+            disableOutput(op.output);
+        }
+        
+        for(auto const& screen: target.get_screens()) {
             xcb_randr_set_screen_size(xcb_connection_,
                     window_dummy_,
                     static_cast<uint16_t>(screen.width),
                     static_cast<uint16_t>(screen.height),
                     static_cast<uint32_t>(screen.width_mm),
                     static_cast<uint32_t>(screen.height_mm));
-            for(auto const& crtc: screen.get_crtcs()) {
-                Output output;
-                output = crtc.outputs.front();
-                xcb_randr_set_crtc_config_cookie_t crtc_config_cookie;
-                crtc_config_cookie = xcb_randr_set_crtc_config (xcb_connection_,
-                                    crtc.crtc,
-                                    XCB_CURRENT_TIME,
-                                    XCB_CURRENT_TIME,
-                                    static_cast<int16_t>(output.x),
-                                    static_cast<int16_t>(output.y),
-                                    output.mode,
-                                    XCB_RANDR_ROTATION_ROTATE_0, 
-                                    1,
-                                    &output.output);
-                xcb_randr_set_crtc_config_reply_t *crtc_config_reply 
-                    = xcb_randr_set_crtc_config_reply(xcb_connection_, crtc_config_cookie, NULL);
-                std::cout << "Config response : " << std::to_string(crtc_config_reply->response_type) << std::endl;
-                std::cout << "Config status : " << std::to_string(crtc_config_reply->status) << std::endl;
-            }
+        }
+        for(auto const& op: toChange) {
+            auto crtcs = getCrtcsByOutput_(op.output);
+            xcb_randr_output_t rawOutputs[1] = {op.output};
+            xcb_randr_set_crtc_config_cookie_t crtc_config_cookie;
+            crtc_config_cookie = xcb_randr_set_crtc_config (xcb_connection_,
+                                crtcs.front(),
+                                XCB_CURRENT_TIME,
+                                XCB_CURRENT_TIME,
+                                static_cast<int16_t>(op.x),
+                                static_cast<int16_t>(op.y),
+                                op.mode,
+                                XCB_RANDR_ROTATION_ROTATE_0, 
+                                1,
+                                rawOutputs);
+            xcb_randr_set_crtc_config_reply_t *crtc_config_reply 
+                = xcb_randr_set_crtc_config_reply(xcb_connection_, crtc_config_cookie, NULL);
+            std::cout << "Config response : " << std::to_string(crtc_config_reply->response_type) << std::endl;
+            std::cout << "Config status : " << std::to_string(crtc_config_reply->status) << std::endl;
         }
     }
     

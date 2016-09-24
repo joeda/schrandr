@@ -14,7 +14,7 @@ namespace schrandr {
         screens_.push_back(s);
     }
     
-    std::vector<Screen> Mode::get_screens()
+    std::vector<Screen> Mode::get_screens() const
     {
         return screens_;
     }
@@ -27,6 +27,34 @@ namespace schrandr {
         }
         
         return deleted;
+    }
+    
+    Output Mode::getOutputByEdid(const Edid &edid) const
+    {
+        for (const auto &screen : screens_) {
+            for (const auto &crtc : screen.get_crtcs()) {
+                for (const auto &output : crtc.outputs) {
+                    if (output.edid == edid) {
+                        return output;
+                    }
+                }
+            }
+        }
+        Output empty;
+        return empty;
+    }
+    
+    std::vector<Output> Mode::getActiveOutputs() const
+    {
+        std::vector<Output> res;
+        for (const auto &screen : screens_) {
+            for (const auto &crtc : screen.get_crtcs()) {
+                for (const auto &output : crtc.outputs) {
+                    res.push_back(output);
+                }
+            }
+        }
+        return res;
     }
     
     int Screen::eraseCrtc(const xcb_randr_crtc_t &crtc)
@@ -48,7 +76,7 @@ namespace schrandr {
         return crtcs_;
     }
     
-    MonitorSetup Mode::get_monitor_setup()
+    MonitorSetup Mode::get_monitor_setup() const
     {
         MonitorSetup res;
         for (const auto &screen : screens_) {

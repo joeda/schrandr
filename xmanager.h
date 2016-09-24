@@ -23,7 +23,7 @@ namespace schrandr {
         ~XManager();
         MonitorSetup get_monitors();
         Mode get_mode();
-        void set_mode(Mode m);
+        void set_mode(const Mode &current, const Mode &target);
         void print_screen_info();
         schrandr_event_t check_for_events();
         std::vector<xcb_randr_output_t> getConnectedOutputs();
@@ -47,6 +47,7 @@ namespace schrandr {
         void get_outputs_raw_();
         bool get_outputs_raw_(xcb_randr_output_t **outputs, int *n_outputs);
         bool get_crtcs_raw_(xcb_randr_crtc_t **crtcs, int *nCrtcs);
+        std::map<Edid, xcb_randr_output_t> getOuputsByEdid_();
         
         void make_window_dummy_();
         void refreshAll_();
