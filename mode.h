@@ -18,6 +18,7 @@ namespace schrandr {
         int x;
         int y;
         Edid edid;
+        std::string name;
     };
     
     struct CRTC {
@@ -33,6 +34,7 @@ namespace schrandr {
         int height_mm;
         std::vector<CRTC> crtcs_;
         void add_crtc(CRTC c);
+        int eraseCrtc(const xcb_randr_crtc_t &crtc);
         std::vector<CRTC> get_crtcs()const;
     };
     
@@ -43,6 +45,7 @@ namespace schrandr {
         std::vector<Screen> get_screens();
         MonitorSetup get_monitor_setup();
         void set_monitor_setup(MonitorSetup s);
+        int eraseCrtc(const xcb_randr_crtc_t &crtc);
     
     private:    
         std::vector<Screen> screens_;

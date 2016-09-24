@@ -57,6 +57,10 @@ namespace schrandr {
         modeList_[ms] = std::map<std::string, Mode>({{"", mode}});
     }
     
+    void ModeList::setDefaultMode(const MonitorSetup &ms, const Mode &mode) {
+        modeList_[ms][""] = mode;
+    }
+    
     bool ModeList::isMonitorSetupConfigured(const MonitorSetup &ms) const {
         return modeList_.find(ms) != modeList_.end();
     }

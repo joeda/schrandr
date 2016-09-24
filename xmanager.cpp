@@ -113,6 +113,22 @@ namespace schrandr {
         }
     }
     
+    bool XManager::get_crtcs_raw_(xcb_randr_crtc_t **crtcs, int *nCrtcs)
+    {
+        auto cookie = xcb_randr_get_screen_resources(xcb_connection_, window_dummy_);
+        auto reply = xcb_randr_get_screen_resources_reply(
+            xcb_connection_, cookie, nullptr);
+        if (reply) {
+            *crtcs = xcb_randr_get_screen_resources_crtcs(reply);
+            *nCrtcs = xcb_randr_get_screen_resources_crtcs_length(reply);
+            return true;
+        } else {
+            *crtcs = nullptr;
+            *nCrtcs = 0;
+            return false;
+        }
+    }
+    
     void XManager::make_window_dummy_()
     {
         window_dummy_ = xcb_generate_id(xcb_connection_);
@@ -164,6 +180,39 @@ namespace schrandr {
         return res;
     }
     
+    std::vector<xcb_randr_output_t> XManager::getActiveOutputs()
+    {
+        std::vector<xcb_randr_output_t> res;
+        xcb_randr_get_screen_resources_cookie_t screen_resources_cookie = 
+            xcb_randr_get_screen_resources(xcb_connection_, window_dummy_);
+        xcb_randr_get_screen_resources_reply_t *screen_resources_reply = 
+            xcb_randr_get_screen_resources_reply(
+                xcb_connection_, screen_resources_cookie, NULL);
+        
+        xcb_randr_crtc_t *crtcs =  
+            xcb_randr_get_screen_resources_crtcs(
+                screen_resources_reply);
+        int n_crtcs = xcb_randr_get_screen_resources_crtcs_length(
+            screen_resources_reply);
+        for (int i = 0; i < n_crtcs; i++) {
+            xcb_randr_get_crtc_info_cookie_t crtc_info_cookie
+                = xcb_randr_get_crtc_info (
+                    xcb_connection_, crtcs[i], XCB_CURRENT_TIME);
+            xcb_randr_get_crtc_info_reply_t *crtc_info_reply =
+                xcb_randr_get_crtc_info_reply(
+                    xcb_connection_, crtc_info_cookie, NULL);
+            xcb_randr_output_t *outputs =
+                xcb_randr_get_crtc_info_outputs(crtc_info_reply);
+            int n_outputs = xcb_randr_get_crtc_info_outputs_length(
+                crtc_info_reply);
+            for (int o = 0; o < n_outputs; o++) {
+                res.push_back(outputs[o]);
+            }
+        }
+        
+        return res;
+    }
+    
     std::vector<xcb_randr_crtc_t>
     XManager::getCrtcsByOutput_(const xcb_randr_output_t &output)
     {
@@ -176,6 +225,40 @@ namespace schrandr {
         int nCrtcs = xcb_randr_get_output_info_crtcs_length(reply);
         for (int i = 0; i < nCrtcs; ++i) {
             res.push_back(crtcs[i]);
+        }
+        
+        return res;
+    }
+    
+    std::vector<xcb_randr_mode_t>
+    XManager::getAvailableModesFromOutput(const xcb_randr_output_t &output)
+    {
+        std::vector<xcb_randr_mode_t> res;
+        auto cookie = xcb_randr_get_output_info(
+            xcb_connection_, output, XCB_CURRENT_TIME);
+        auto reply = xcb_randr_get_output_info_reply(
+            xcb_connection_, cookie, nullptr);
+        xcb_randr_mode_t *modes = xcb_randr_get_output_info_modes(reply);
+        int nModes = xcb_randr_get_output_info_modes_length(reply);
+        for (int i = 0; i < nModes; ++i) {
+            res.push_back(modes[i]);
+        }
+        
+        return res;
+    }
+    
+    std::vector<xcb_randr_mode_info_t> XManager::getModeInfos()
+    {
+        std::vector<xcb_randr_mode_info_t> res;
+        auto cookie = xcb_randr_get_screen_resources(
+            xcb_connection_, window_dummy_);
+        auto reply = xcb_randr_get_screen_resources_reply (
+            xcb_connection_, cookie, nullptr);
+        xcb_randr_mode_info_t *modeInfos = xcb_randr_get_screen_resources_modes(
+            reply);
+        int nModeInfos = xcb_randr_get_screen_resources_modes_length(reply);
+        for (int i = 0; i < nModeInfos; ++i) {
+            res.push_back(modeInfos[i]);
         }
         
         return res;
@@ -390,21 +473,17 @@ namespace schrandr {
                 for (int o = 0; o < n_outputs; o++) {
                     Output op;
                     op.output = outputs[o];
-                    auto atoms = getAvailableAtoms(outputs[o]);
-                    for (const auto &atom : atoms) {
-                        std::cout << "Atom available in "
-                                  << std::to_string(outputs[o])
-                                  << ": " << atom << std::endl;
-                    }
                     xcb_randr_get_output_info_cookie_t output_info_cookie =
                         xcb_randr_get_output_info(
                             xcb_connection_, outputs[o], XCB_CURRENT_TIME);
                     xcb_randr_get_output_info_reply_t *output_info_reply =
                         xcb_randr_get_output_info_reply(
                             xcb_connection_, output_info_cookie, XCB_CURRENT_TIME);
-                    /* char* name = xcb_randr_get_output_info_name(output_info_reply);
-                    n_name = xcb_randr_get_output_info_name_length(output_info_reply);
-                    cname[n_name] = '\0'; */
+                    char* name = reinterpret_cast<char*>(
+                        xcb_randr_get_output_info_name(output_info_reply));
+                    int n_name = xcb_randr_get_output_info_name_length(
+                        output_info_reply);
+                    name[n_name] = '\0';
                     xcb_randr_mode_t * modes =
                         xcb_randr_get_output_info_modes(output_info_reply);
                     int n_modes = xcb_randr_get_output_info_modes_length (output_info_reply);
@@ -412,6 +491,7 @@ namespace schrandr {
                     op.x = crtc_info_reply->x;
                     op.y = crtc_info_reply->y;
                     op.edid = get_edid_(outputs[o]);
+                    op.name = std::string(name);
                     crtc.outputs.push_back(op);
                 }
                 if (n_outputs > 0) {
@@ -474,10 +554,9 @@ namespace schrandr {
             return false;
         }
         xcb_randr_crtc_t crtc = crtcsToDisable.front();
-        xcb_randr_output_t outputCopy[1] = {output};
-        
-        std::cout << "CRTC to disable: " << crtc << std::endl;
-        std::cout << "Output to disable: " << outputCopy[0] << std::endl;
+        auto modePre = get_mode();
+        int reduction = modePre.eraseCrtc(crtc);
+        std::cout << "CRTCs kicked: " << reduction << std::endl;
         auto cookie = xcb_randr_set_crtc_config(
             xcb_connection_,
             crtc,
@@ -495,7 +574,51 @@ namespace schrandr {
                   << std::endl;
         std::cout << "disableOutpt status: " << std::to_string(reply->status)
                   << std::endl;
+        //set_mode(modePre);  //fails for some reason
         return true;
+    }
+    
+    bool XManager::activateAnyOutput()
+    {
+        std::cout << "Trying to activate any output" << std::endl;
+        xcb_randr_crtc_t *crtcs;
+        int nCrtcs;
+        if (!get_crtcs_raw_(&crtcs, &nCrtcs)) {
+            return false;
+        }
+        for (int i = 0; i < nCrtcs; ++i) {
+            auto cookie = xcb_randr_get_crtc_info(
+                xcb_connection_, crtcs[i], XCB_CURRENT_TIME);
+            auto reply = xcb_randr_get_crtc_info_reply(
+                xcb_connection_, cookie, nullptr);
+            int nPossibleOutputs
+                = xcb_randr_get_crtc_info_possible_length(reply);
+            if (nPossibleOutputs > 0) {
+                auto outputs = xcb_randr_get_crtc_info_possible (reply);
+                auto modes = getAvailableModesFromOutput(outputs[0]);
+                auto setCookie = xcb_randr_set_crtc_config(
+                    xcb_connection_,
+                    crtcs[i],
+                    XCB_CURRENT_TIME,
+                    XCB_CURRENT_TIME,
+                    0, //x
+                    0, //y
+                    modes.front(), //Mode 
+                    XCB_RANDR_ROTATION_ROTATE_0, //rotation
+                    1, //outputs_len
+                    outputs); //ptr to outputs
+                auto setReply = xcb_randr_set_crtc_config_reply(
+                    xcb_connection_, setCookie, nullptr);
+                std::cout << "activateAny response: " << std::to_string(reply->response_type)
+                        << std::endl;
+                std::cout << "activateAny status: " << std::to_string(reply->status)
+                        << std::endl;
+                if (reply->response_type == 1) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
     
     schrandr_event_t XManager::check_for_events()

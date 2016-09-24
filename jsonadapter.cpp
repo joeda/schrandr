@@ -96,6 +96,7 @@ namespace schrandr {
                                 output.mode = static_cast<xcb_randr_mode_t>(mode_as_uint);
                                 output.output = static_cast<xcb_randr_output_t>(output_as_uint);
                                 output.edid.set_edid(json_output["EDID"].asString());
+                                output.name = json_output["name"].asString();
                                 crtc.outputs.push_back(output);
                             }
                         }
@@ -129,6 +130,7 @@ namespace schrandr {
                     json_output["y"] = output.y;
                     json_output["output"] = reinterpret_cast<uint32_t>(output.output);
                     json_output["EDID"] = output.edid.to_string();
+                    json_output["name"] = output.name;
                     outputs.append(json_output);
                 }
                 json_crtc["outputs"] = outputs;

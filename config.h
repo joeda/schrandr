@@ -18,6 +18,7 @@ namespace schrandr {
         ModeList(const modeListMap_t &list);
         
         bool addMode(const MonitorSetup &ms, const Mode &mode);
+        void setDefaultMode(const MonitorSetup &ms, const Mode &mode);
         bool addNamedMode(const MonitorSetup &ms, const Mode &mode,
             const std::string &name);
         bool isMonitorSetupConfigured(const MonitorSetup &ms) const;

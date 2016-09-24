@@ -27,7 +27,12 @@ namespace schrandr {
         void print_screen_info();
         schrandr_event_t check_for_events();
         std::vector<xcb_randr_output_t> getConnectedOutputs();
+        std::vector<xcb_randr_output_t> getActiveOutputs();
         bool disableOutput(const xcb_randr_output_t &output);
+        bool activateAnyOutput();
+        std::vector<xcb_randr_mode_t> 
+            getAvailableModesFromOutput(const xcb_randr_output_t &output);
+        std::vector<xcb_randr_mode_info_t> getModeInfos();
 
     private:
         xcb_connection_t *xcb_connection_;
@@ -41,6 +46,8 @@ namespace schrandr {
         void get_screens_raw_();
         void get_outputs_raw_();
         bool get_outputs_raw_(xcb_randr_output_t **outputs, int *n_outputs);
+        bool get_crtcs_raw_(xcb_randr_crtc_t **crtcs, int *nCrtcs);
+        
         void make_window_dummy_();
         void refreshAll_();
         Edid get_edid_(const xcb_randr_output_t &output);

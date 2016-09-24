@@ -19,6 +19,25 @@ namespace schrandr {
         return screens_;
     }
     
+    int Mode::eraseCrtc(const xcb_randr_crtc_t &crtc)
+    {
+        int deleted = 0;
+        for (auto screen : screens_) {
+            deleted += screen.eraseCrtc(crtc);
+        }
+        
+        return deleted;
+    }
+    
+    int Screen::eraseCrtc(const xcb_randr_crtc_t &crtc)
+    {
+        int preSize = crtcs_.size();
+        crtcs_.erase(std::remove_if(crtcs_.begin(), crtcs_.end(), 
+                       [&crtc](CRTC i) { return (i.crtc == crtc); }), crtcs_.end());
+        
+        return preSize - crtcs_.size();
+    }
+    
     void Screen::add_crtc(CRTC c)
     {
         crtcs_.push_back(c);
