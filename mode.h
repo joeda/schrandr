@@ -48,6 +48,7 @@ namespace schrandr {
         int eraseCrtc(const xcb_randr_crtc_t &crtc);
         Output getOutputByEdid(const Edid &edid) const;
         std::vector<Output> getActiveOutputs() const;
+        CRTC getCrtcByOutput(const xcb_randr_output_t &output) const;
 
     
     private:    

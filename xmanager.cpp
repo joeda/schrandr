@@ -369,7 +369,7 @@ namespace schrandr {
         }
         
         for (const auto &op : toDisable) {
-            disableOutput(op.output);
+            disableOutput(op.output, current);
         }
         
         for(auto const& screen: target.get_screens()) {
@@ -524,7 +524,7 @@ namespace schrandr {
             
             //std::vector<CRTC> res.crtcs_;
             
-            std::cout << "Found " << std::to_string(n_crtcs) << "CRTCs." << std::endl;
+            //std::cout << "Found " << std::to_string(n_crtcs) << "CRTCs." << std::endl;
             for (int i = 0; i < n_crtcs; i++) {
                 CRTC crtc;
                 crtc.crtc = crtcs[i];
@@ -539,7 +539,7 @@ namespace schrandr {
                     xcb_randr_get_crtc_info_outputs(crtc_info_reply);
                 int n_outputs = xcb_randr_get_crtc_info_outputs_length(
                     crtc_info_reply);
-                std::cout << "This CRTC has " << std::to_string(n_outputs) << " outputs." << std::endl;
+                //std::cout << "This CRTC has " << std::to_string(n_outputs) << " outputs." << std::endl;
                 for (int o = 0; o < n_outputs; o++) {
                     Output op;
                     op.output = outputs[o];
@@ -575,14 +575,14 @@ namespace schrandr {
     
     MonitorSetup XManager::get_monitors()
     {
-        std::cout << "get_monitors() ----" << std::endl;
+        //std::cout << "get_monitors() ----" << std::endl;
         MonitorSetup monitor_setup;
         int n_outputs;
         xcb_randr_output_t *outputs;
         if (!get_outputs_raw_(&outputs, &n_outputs)) {
             return monitor_setup;
         }
-        printf("Number of outputs: %d\n", n_outputs);
+        //printf("Number of outputs: %d\n", n_outputs);
         for (int i = 0; i < n_outputs; ++i) {
             // check if a device is connected
             auto outputInfoCookie = xcb_randr_get_output_info(
@@ -606,7 +606,7 @@ namespace schrandr {
             }
         }
         
-        std::cout << "get_monitors() ----" << std::endl;
+        //std::cout << "get_monitors() ----" << std::endl;
         
         return monitor_setup;
     }
@@ -617,19 +617,15 @@ namespace schrandr {
      * A change in modes, such as using xrandr, will yield both SCREEN_CHANGE
      * and CRTC_CHANGE. (Dis)connecting a monitor will yield only a CRTC_CHANGE.
      */
-    bool XManager::disableOutput(const xcb_randr_output_t &output)
+    bool XManager::disableOutput(
+        const xcb_randr_output_t &output, const Mode &lastConnected)
     {
-        auto crtcsToDisable = getCrtcsByOutput_(output);
-        if (crtcsToDisable.empty()) {
-            return false;
-        }
-        xcb_randr_crtc_t crtc = crtcsToDisable.front();
-        auto modePre = get_mode();
-        int reduction = modePre.eraseCrtc(crtc);
-        std::cout << "CRTCs kicked: " << reduction << std::endl;
+        auto modeCrtc = lastConnected.getCrtcByOutput(output);
+        std::cout << "disableOutput: CRTC " << std::to_string(modeCrtc.crtc)
+                  << " for output " << std::to_string(output) << std::endl;
         auto cookie = xcb_randr_set_crtc_config(
             xcb_connection_,
-            crtc,
+            modeCrtc.crtc,
             XCB_CURRENT_TIME,
             XCB_CURRENT_TIME,
             1, //x
@@ -642,8 +638,8 @@ namespace schrandr {
             xcb_connection_, cookie, nullptr);
         std::cout << "disableOutpt response: " << std::to_string(reply->response_type)
                   << std::endl;
-        std::cout << "disableOutpt status: " << std::to_string(reply->status)
-                  << std::endl;
+        //std::cout << "disableOutpt status: " << std::to_string(reply->status)
+         //         << std::endl;
         //set_mode(modePre);  //fails for some reason
         return true;
     }
@@ -681,8 +677,8 @@ namespace schrandr {
                     xcb_connection_, setCookie, nullptr);
                 std::cout << "activateAny response: " << std::to_string(reply->response_type)
                         << std::endl;
-                std::cout << "activateAny status: " << std::to_string(reply->status)
-                        << std::endl;
+                //std::cout << "activateAny status: " << std::to_string(reply->status)
+                //        << std::endl;
                 if (reply->response_type == 1) {
                     return true;
                 }
@@ -703,25 +699,25 @@ namespace schrandr {
                 free(ev);
                 continue;
             }
-            std::cout << "Response Type: " << std::to_string(ev->response_type)
+            /* std::cout << "Response Type: " << std::to_string(ev->response_type)
                 << std::endl;
             std::cout << "Screen Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE) << std::endl;
             std::cout << "Output Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE) << std::endl;
             std::cout << "CRTC Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE) << std::endl;
-            std::cout << "Property Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY) << std::endl;
+            std::cout << "Property Change: " << std::to_string(XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY) << std::endl; */
             switch (static_cast<x_event_t>(ev->response_type)) {
             case SCREEN_CHANGE: {
-                std::cout << "Screen change" << std::endl;
+                //std::cout << "Screen change" << std::endl;
                 screen_event = true;
                 break;
             }
             case CRTC_CHANGE: {
-                std::cout << "CRTC change" << std::endl;
+                //std::cout << "CRTC change" << std::endl;
                 crtc_event = true;
                 break;
             }
             default: {
-                std::cout << "None of Screen, output or CRTC change" << std::endl;
+                //std::cout << "None of Screen, output or CRTC change" << std::endl;
                 break;
             }
             }

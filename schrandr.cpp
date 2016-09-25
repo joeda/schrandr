@@ -182,14 +182,15 @@ int main(int argc, char **argv)
         
         Config config;
         bool something_happened;
-        Mode current_mode = xmanager.get_mode();
+        Mode prevMode = xmanager.get_mode();
+        Mode currentMode = prevMode;
         ModeList known_modes;
         auto currentMonitorSetup = xmanager.get_monitors();
 
-        known_modes.addNamedMode(currentMonitorSetup, current_mode, "");
+        known_modes.addNamedMode(currentMonitorSetup, prevMode, "");
         //config.print_modelist(known_modes);
         auto connectedOutputs = xmanager.getConnectedOutputs();
-        for (const auto &output : connectedOutputs) {
+        /* for (const auto &output : connectedOutputs) {
             std::cout << "Available modes for output " << std::to_string(output)
                       << ":";
             for (const auto &mode : xmanager.getAvailableModesFromOutput(output)) {
@@ -201,7 +202,7 @@ int main(int argc, char **argv)
         for (const auto &conn : xmanager.getActiveOutputs()) {
             std::cout << "Active: " << std::to_string(conn)
                     << std::endl;
-        }
+        } */
         // Apparently, the first mode has always the highest resolution
         /* 
         for (const auto &mi : xmanager.getModeInfos()) {
@@ -211,6 +212,9 @@ int main(int argc, char **argv)
                       << mi.mode_flags << std::endl;
         }
         */
+        std::cout << "---MODELIST--- (initially)" << std::endl;
+        config.print_modelist(known_modes);
+        std::cout << "---MODELIST END--- (initially)\n" << std::endl;
         
         while (true) {
             std::cout << "Infinite Loop!" << std::endl;
@@ -222,38 +226,47 @@ int main(int argc, char **argv)
             switch(xmanager.check_for_events()) {
             case MODE_EVENT: {
                 std::cout << "Mode Event" << std::endl;
+                prevMode = currentMode;
+                currentMode = xmanager.get_mode();
                 std::cout << xmanager.get_monitors().print_setup();
                 known_modes.setDefaultMode(
-                    xmanager.get_monitors(), xmanager.get_mode());
+                    xmanager.get_monitors(), currentMode);
                 std::cout << "---MODELIST---" << std::endl;
                 config.print_modelist(known_modes);
                 std::cout << "---MODELIST END---\n" << std::endl;
             } break;
             case CONNECTION_EVENT: {
                 std::cout << "Connection Event" << std::endl;
+                prevMode = currentMode;
+                std::cout << "---MODELIST---" << std::endl;
+                config.print_modelist(known_modes);
+                std::cout << "---MODELIST END---\n" << std::endl;
                 auto monSetup = xmanager.get_monitors();
+                std::cout << "MonitorSetup after event:" << std::endl;
                 std::cout << monSetup.print_setup();
                 auto pastConn = connectedOutputs;
                 connectedOutputs = xmanager.getConnectedOutputs();
                 auto diff = compareConnectedOutputs(pastConn, connectedOutputs);
                 if (known_modes.isMonitorSetupConfigured(monSetup)) {
+                    std::cout << "Found setup in configured setups" << std::endl;
                     Mode toSet = known_modes.getAnyMode(monSetup);
                     std::cout << "Attempting to set mode" << std::endl;
                     xmanager.set_mode(xmanager.get_mode(), toSet);
                 }
                 else {
+                    std::cout << "setup not found in configured setups" << std::endl;
                     for (const auto &conn : diff.second) {
                         std::cout << "disconnected: " << std::to_string(conn)
                                 << std::endl;
-                        xmanager.disableOutput(conn);
+                        xmanager.disableOutput(conn, prevMode);
                     }
-                    auto m = xmanager.get_mode();
+                    /* auto m = xmanager.get_mode();
                     std::cout << "POST (DIS)CONNECTION----" << std::endl;
                     //config.print_mode(m);
-                    std::cout << "POST (DIS)CONNECTION----" << std::endl;
-                    if (util::intersect(
-                        connectedOutputs, xmanager.getActiveOutputs()).empty())
+                    std::cout << "POST (DIS)CONNECTION----" << std::endl; */
+                    if (xmanager.getActiveOutputs().empty())
                     {
+                        std::cout << "Apparently no output active" << std::endl;
                         xmanager.activateAnyOutput();
                     }
                 }
@@ -267,6 +280,7 @@ int main(int argc, char **argv)
                     std::cout << " " << std::to_string(c);
                 }
                 std::cout << std::endl;
+                currentMode = xmanager.get_mode();
             } break;
             case OTHER_EVENT:
                 break;

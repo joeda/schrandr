@@ -28,7 +28,8 @@ namespace schrandr {
         schrandr_event_t check_for_events();
         std::vector<xcb_randr_output_t> getConnectedOutputs();
         std::vector<xcb_randr_output_t> getActiveOutputs();
-        bool disableOutput(const xcb_randr_output_t &output);
+        bool disableOutput(
+            const xcb_randr_output_t &output, const Mode &lastConnected);
         bool activateAnyOutput();
         std::vector<xcb_randr_mode_t> 
             getAvailableModesFromOutput(const xcb_randr_output_t &output);

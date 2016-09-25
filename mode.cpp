@@ -57,6 +57,22 @@ namespace schrandr {
         return res;
     }
     
+    CRTC Mode::getCrtcByOutput(const xcb_randr_output_t &output) const
+    {
+        for (const auto &screen : screens_) {
+            for (const auto &crtc : screen.get_crtcs()) {
+                for (const auto &op : crtc.outputs) {
+                    std::cout << "Output: " << op.output << std::endl;
+                    if (op.output == output) {
+                        return crtc;
+                    }
+                }
+            }
+        }
+        CRTC empty;
+        return empty;
+    }
+    
     int Screen::eraseCrtc(const xcb_randr_crtc_t &crtc)
     {
         int preSize = crtcs_.size();
