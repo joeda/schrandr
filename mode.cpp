@@ -57,6 +57,13 @@ namespace schrandr {
         return res;
     }
     
+    std::ostream& operator<<(std::ostream &out, const Output &op)
+    {
+        out << "\t\tOutput: " << op.output << "\n\t\tEDID: "
+            << op.edid.to_string() << "\n\t\tName: " << op.name << "\n";
+        return out;
+    }
+    
     CRTC Mode::getCrtcByOutput(const xcb_randr_output_t &output) const
     {
         for (const auto &screen : screens_) {
@@ -90,6 +97,17 @@ namespace schrandr {
     bool CRTC::isEmpty() const
     {
         return outputs.empty();
+    }
+    
+    std::ostream& operator<<(std::ostream &out, const CRTC &crtc)
+    {
+        out << "CRTC " << crtc.crtc << "\n\tX|Y: " << crtc.x << "|" << crtc.y
+            << "\n\tMode: " << crtc.mode << "\n\tOutputs:\n";
+        for (const auto &op : crtc.outputs) {
+            out << op;
+        }
+        
+        return out;
     }
     
     int Screen::eraseCrtc(const xcb_randr_crtc_t &crtc) 

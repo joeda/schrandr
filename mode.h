@@ -16,6 +16,8 @@ namespace schrandr {
         xcb_randr_output_t output;
         Edid edid;
         std::string name;
+        
+        friend std::ostream& operator<<(std::ostream &out, const Output &op);
     };
     
     struct CRTC {
@@ -27,6 +29,8 @@ namespace schrandr {
         std::vector<Output> outputs;
         bool hasSameEdids(const CRTC &crtc) const;
         bool isEmpty() const;
+        
+        friend std::ostream& operator<<(std::ostream &out, const CRTC &crtc);
     };
     
     class Screen {
