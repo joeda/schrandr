@@ -392,18 +392,18 @@ namespace schrandr {
             xcb_randr_output_t* outputPtr = &outputs[0];
             std::cout << "XCB Call:" << std::endl;
             std::cout << "\tCRTC: " << crtc.crtc
-                    << "\n\tx: " << static_cast<int16_t>(crtc.outputs.front().x)
-                    << "\n\ty: " << static_cast<int16_t>(crtc.outputs.front().y)
-                    << "\n\tmode: " << crtc.outputs.front().mode
+                    << "\n\tx: " << static_cast<int16_t>(crtc.x)
+                    << "\n\ty: " << static_cast<int16_t>(crtc.y)
+                    << "\n\tmode: " << crtc.mode
                     << "\n\toutput: " << outputs[0] << std::endl;
             xcb_randr_set_crtc_config_cookie_t crtc_config_cookie;
             crtc_config_cookie = xcb_randr_set_crtc_config (xcb_connection_,
                                 crtc.crtc,
                                 XCB_CURRENT_TIME,
                                 XCB_CURRENT_TIME,
-                                static_cast<int16_t>(crtc.outputs.front().x),
-                                static_cast<int16_t>(crtc.outputs.front().y),
-                                crtc.outputs.front().mode,
+                                static_cast<int16_t>(crtc.x),
+                                static_cast<int16_t>(crtc.y),
+                                crtc.mode,
                                 XCB_RANDR_ROTATION_ROTATE_0, 
                                 outputs.size(),
                                 outputPtr);
@@ -552,6 +552,8 @@ namespace schrandr {
                     xcb_randr_get_crtc_info_outputs(crtc_info_reply);
                 int n_outputs = xcb_randr_get_crtc_info_outputs_length(
                     crtc_info_reply);
+                crtc.x = crtc_info_reply->x;
+                crtc.y = crtc_info_reply->y;
                 //std::cout << "This CRTC has " << std::to_string(n_outputs) << " outputs." << std::endl;
                 for (int o = 0; o < n_outputs; o++) {
                     Output op;
@@ -570,9 +572,7 @@ namespace schrandr {
                     xcb_randr_mode_t * modes =
                         xcb_randr_get_output_info_modes(output_info_reply);
                     int n_modes = xcb_randr_get_output_info_modes_length (output_info_reply);
-                    op.mode = modes[0];
-                    op.x = crtc_info_reply->x;
-                    op.y = crtc_info_reply->y;
+                    crtc.mode = modes[0];
                     op.edid = get_edid_(outputs[o]);
                     op.name = std::string(name);
                     crtc.outputs.push_back(op);

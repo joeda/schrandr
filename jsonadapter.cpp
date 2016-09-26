@@ -70,31 +70,21 @@ namespace schrandr {
                     for (int i = 0; i < json_crtcs.size(); i++) {
                         json_crtc = json_crtcs[i];
                         CRTC crtc;
-                        int crtc_as_int;
-                        uint32_t crtc_as_uint;
-                        crtc_as_int = json_crtc["crtc"].asUInt();
-                        crtc_as_uint = static_cast<uint32_t>(crtc_as_int);
-                        crtc.crtc = static_cast<xcb_randr_crtc_t>(crtc_as_uint);
-                        
+
+                        crtc.crtc = 
+                            static_cast<xcb_randr_crtc_t>(json_crtc["crtc"].asUInt());
+                        crtc.x = json_crtc["x"].asInt();
+                        crtc.y = json_crtc["y"].asInt();
+                        crtc.mode = static_cast<uint32_t>(json_crtc["mode"].asInt());
                         Json::Value json_outputs = json_crtc["outputs"];
                         Json::Value json_output;
                         if (json_outputs.isArray()) {
                             for (int j = 0; j < json_outputs.size(); j++) {
                                 json_output = json_outputs[j];
                                 Output output;
-                                output.x = json_output["x"].asInt();
-                                output.y = json_output["y"].asInt();
-                                int mode_as_int;
-                                int output_as_int;
-                                uint32_t mode_as_uint;
-                                uint32_t output_as_uint;
-                                
-                                mode_as_int = json_output["mode"].asInt();
-                                output_as_int = json_output["output"].asInt();
-                                mode_as_uint = static_cast<uint32_t>(mode_as_int);
-                                output_as_uint = static_cast<uint32_t>(output_as_int);
-                                output.mode = static_cast<xcb_randr_mode_t>(mode_as_uint);
-                                output.output = static_cast<xcb_randr_output_t>(output_as_uint);
+                                output.output = 
+                                    static_cast<xcb_randr_output_t>(
+                                        json_output["output"].asInt());
                                 output.edid.set_edid(json_output["EDID"].asString());
                                 output.name = json_output["name"].asString();
                                 crtc.outputs.push_back(output);
@@ -125,9 +115,6 @@ namespace schrandr {
                 Json::Value outputs;
                 for(auto const& output: crtc.outputs) {
                     Json::Value json_output;
-                    json_output["mode"] = reinterpret_cast<uint32_t>(output.mode);
-                    json_output["x"] = output.x;
-                    json_output["y"] = output.y;
                     json_output["output"] = reinterpret_cast<uint32_t>(output.output);
                     json_output["EDID"] = output.edid.to_string();
                     json_output["name"] = output.name;
@@ -135,6 +122,9 @@ namespace schrandr {
                 }
                 json_crtc["outputs"] = outputs;
                 json_crtc["crtc"] = reinterpret_cast<uint32_t>(crtc.crtc);
+                json_crtc["mode"] = reinterpret_cast<uint32_t>(crtc.mode);
+                json_crtc["x"] = crtc.x;
+                json_crtc["y"] = crtc.y;
                 crtcs.append(json_crtc);
             }
             json_screen["crtcs"] = crtcs;

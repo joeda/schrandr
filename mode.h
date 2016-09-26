@@ -14,9 +14,6 @@ namespace schrandr {
     
     struct Output {
         xcb_randr_output_t output;
-        xcb_randr_mode_t mode;
-        int x;
-        int y;
         Edid edid;
         std::string name;
     };
@@ -24,6 +21,9 @@ namespace schrandr {
     struct CRTC {
     public:
         xcb_randr_crtc_t crtc;
+        xcb_randr_mode_t mode;
+        int x;
+        int y;
         std::vector<Output> outputs;
         bool hasSameEdids(const CRTC &crtc) const;
         bool isEmpty() const;

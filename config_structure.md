@@ -1,14 +1,14 @@
 # Config file standard
 
 Object output:
-  "mode" => xcb_mode
-  "x" => xcb_x
-  "y" => xcb_y
   "output" => xcb_output
   "EDID" => edid
 
 Object crtc:
   "ctrc" => xcb_crtc
+  "mode" => xcb_mode
+  "x" => xcb_x
+  "y" => xcb_y
   "outputs" => Array<output>
 
 Obejct Screen:
