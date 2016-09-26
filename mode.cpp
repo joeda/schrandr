@@ -73,7 +73,26 @@ namespace schrandr {
         return empty;
     }
     
-    int Screen::eraseCrtc(const xcb_randr_crtc_t &crtc)
+    bool CRTC::hasSameEdids(const CRTC &crtc) const
+    {
+        std::vector<Edid> self, other;
+        for (const auto &op : outputs) {
+            self.push_back(op.edid);
+        }
+        for (const auto &op : crtc.outputs) {
+            other.push_back(op.edid);
+        }
+        std::sort(self.begin(), self.end());
+        std::sort(other.begin(), other.end());
+        return self == other;
+    }
+    
+    bool CRTC::isEmpty() const
+    {
+        return outputs.empty();
+    }
+    
+    int Screen::eraseCrtc(const xcb_randr_crtc_t &crtc) 
     {
         int preSize = crtcs_.size();
         crtcs_.erase(std::remove_if(crtcs_.begin(), crtcs_.end(), 
@@ -90,6 +109,17 @@ namespace schrandr {
     std::vector<CRTC> Screen::get_crtcs()const
     {
         return crtcs_;
+    }
+    
+    bool Screen::operator==(const Screen &lhs)
+    {
+        return std::tie(width, height, width_mm, height_mm)
+            == std::tie(lhs.width, lhs.height, lhs.width_mm, lhs.height_mm);
+    }
+    
+    bool Screen::operator!=(const Screen &lhs)
+    {
+        return !operator==(lhs);
     }
     
     MonitorSetup Mode::get_monitor_setup() const

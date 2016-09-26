@@ -1,14 +1,14 @@
 #ifndef MODE_H_
 #define MODE_H_
 
-#include "monitor_setup.h"
-#include "edid.h"
-
 #include <string>
 #include <vector>
 #include <xcb/randr.h>
 #include <xcb/xcb.h>
+#include <tuple>
 
+#include "monitor_setup.h"
+#include "edid.h"
 
 namespace schrandr {
     
@@ -22,8 +22,11 @@ namespace schrandr {
     };
     
     struct CRTC {
+    public:
         xcb_randr_crtc_t crtc;
         std::vector<Output> outputs;
+        bool hasSameEdids(const CRTC &crtc) const;
+        bool isEmpty() const;
     };
     
     class Screen {
@@ -36,6 +39,9 @@ namespace schrandr {
         void add_crtc(CRTC c);
         int eraseCrtc(const xcb_randr_crtc_t &crtc);
         std::vector<CRTC> get_crtcs()const;
+        
+        bool operator==(const Screen &lhs);
+        bool operator!=(const Screen &lhs);
     };
     
     class Mode {
@@ -49,7 +55,6 @@ namespace schrandr {
         Output getOutputByEdid(const Edid &edid) const;
         std::vector<Output> getActiveOutputs() const;
         CRTC getCrtcByOutput(const xcb_randr_output_t &output) const;
-
     
     private:    
         std::vector<Screen> screens_;

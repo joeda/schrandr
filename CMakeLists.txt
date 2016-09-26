@@ -11,7 +11,7 @@ include(FindJSONCpp.cmake)
         message(FATAL_ERROR "Failed to find JSONCPP")
     endif(NOT JSONCPP_FOUND)
     
-set(CORE_LIBS logging xmanager monitor_setup edid config jsonadapter mode)
+set(CORE_LIBS logging xmanager monitor_setup edid config jsonadapter mode mode_change)
 set(EXT_LIBS ${XCB_LIBRARIES} ${JSONCPP_LIBRARIES})
 
 foreach(LIB ${CORE_LIBS})
