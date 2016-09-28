@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <unistd.h>
 #include <map>
+#include <sstream>
 
 #include "xmanager.h"
 #include "mode.h"
@@ -21,7 +22,8 @@
 
 namespace schrandr {
     
-    XManager::XManager()
+    XManager::XManager(std::shared_ptr<Logger> logger)
+    : logger_(logger)
     {
         xcb_connection_ = xcb_connect(NULL, &screen_);
         get_screens_raw_();
@@ -174,10 +176,11 @@ namespace schrandr {
             case XCB_RANDR_CONNECTION_DISCONNECTED:
                 break;
             case XCB_RANDR_CONNECTION_UNKNOWN:
-                std::cout << "Connection status unknown?" << std::endl;
+                logger_->log(LOG_WARNING, std::string("Could not determine "
+                    " connection status of output ") + std::to_string(outputs[i]));
                 break;
             default:
-                std::cout << "Something went seriously wrong" << std::endl;
+                logger_->log(LOG_ERR, "Invalid xcb_randr_connection_t");
             }
         }
         
@@ -266,12 +269,11 @@ namespace schrandr {
     
     std::map<Edid, std::vector<xcb_randr_crtc_t> > XManager::getCrtcsByEdid_()
     {
-        usleep(500000);
         std::map<Edid, std::vector<xcb_randr_crtc_t> >res;
         int nCrtcs;
         xcb_randr_crtc_t *crtcs;
         get_crtcs_raw_(&crtcs, &nCrtcs);
-        std::cout << "in getCrtcsByEdid: Found " << nCrtcs << " CRTCs" << std::endl;
+        ///std::cout << "in getCrtcsByEdid: Found " << nCrtcs << " CRTCs" << std::endl;
         for (int i = 0; i < nCrtcs; ++i) {
             auto opCookie = xcb_randr_get_crtc_info(
                 xcb_connection_, crtcs[i], XCB_CURRENT_TIME);
@@ -279,13 +281,13 @@ namespace schrandr {
                 xcb_connection_, opCookie, nullptr);
             auto outputs = xcb_randr_get_crtc_info_possible(opReply);
             int nOutputs = xcb_randr_get_crtc_info_possible_length(opReply);
-            std::cout << "in getCrtcsByEdid: Found " << nOutputs << " Outputs" << std::endl;
+            /// std::cout << "in getCrtcsByEdid: Found " << nOutputs << " Outputs" << std::endl;
 
             for (int j = 0; j < nOutputs; ++j) {
                 auto edid = get_edid_(outputs[j]);
                 if (!edid.to_string().empty()) {
-                    std::cout << "Matched EDID " << edid.to_string()
-                              << " to CRTC " << crtcs[i] << std::endl;
+                    /* std::cout << "Matched EDID " << edid.to_string()
+                              << " to CRTC " << crtcs[i] << std::endl; */
                     res[edid].push_back(crtcs[i]);
                 }
             }
@@ -364,13 +366,13 @@ namespace schrandr {
         
     }
     
-    void XManager::set_mode(const Mode &current, const Mode &target)
+    bool XManager::set_mode(const Mode &current, const Mode &target)
     {
+        bool success = true;
         ModeChange modeChange(current,
                               target,
                               getCrtcsByEdid_(),
                               getOuputsByEdid_());
-        std::cout << "Debug A1" << std::endl;
         for(auto const& screen: modeChange.getScreenChanges()) {
             xcb_randr_set_screen_size(xcb_connection_,
                     window_dummy_,
@@ -379,23 +381,23 @@ namespace schrandr {
                     static_cast<uint32_t>(screen.width_mm),
                     static_cast<uint32_t>(screen.height_mm));
         }
-        std::cout << "Debug A2" << std::endl;
         for (const auto &crtc : modeChange.getCrtcsToDisable()) {
             disableCrtc(crtc);
         }
-        std::cout << "Debug A3" << std::endl;
         for(auto const& crtc: modeChange.getCrtcChanges()) {
             std::vector<xcb_randr_output_t> outputs;
             for (const auto &op : crtc.outputs) {
                 outputs.push_back(op.output);
             }
             xcb_randr_output_t* outputPtr = &outputs[0];
-            std::cout << "XCB Call:" << std::endl;
-            std::cout << "\tCRTC: " << crtc.crtc
+            std::ostringstream os;
+            os << "XCB Call:" << std::endl;
+            os << "\tCRTC: " << crtc.crtc
                     << "\n\tx: " << static_cast<int16_t>(crtc.x)
                     << "\n\ty: " << static_cast<int16_t>(crtc.y)
                     << "\n\tmode: " << crtc.mode
                     << "\n\toutput: " << outputs[0] << std::endl;
+            logger_->log(std::string("Attempting XCB Call\n") + os.str());
             xcb_randr_set_crtc_config_cookie_t crtc_config_cookie;
             crtc_config_cookie = xcb_randr_set_crtc_config (xcb_connection_,
                                 crtc.crtc,
@@ -409,9 +411,16 @@ namespace schrandr {
                                 outputPtr);
             xcb_randr_set_crtc_config_reply_t *crtc_config_reply 
                 = xcb_randr_set_crtc_config_reply(xcb_connection_, crtc_config_cookie, NULL);
-            std::cout << "Config response : " << std::to_string(crtc_config_reply->response_type) << std::endl;
-            std::cout << "Config status : " << std::to_string(crtc_config_reply->status) << std::endl;
+            int responseType = crtc_config_reply->response_type;
+            int status = crtc_config_reply->status;
+            if (responseType != 1 || status != 0) {
+                success = false;
+                logger_->log(LOG_ERR, std::string("XCB Call\n")
+                    + os.str() + "\nfailed");
+            }
         }
+        
+        return success;
     }
     
     Edid XManager::get_edid_(const xcb_randr_output_t &output)
@@ -750,7 +759,6 @@ namespace schrandr {
         bool screen_event = false;
         xcb_generic_event_t *ev;
         while ((ev = xcb_poll_for_event(xcb_connection_)) != NULL) {
-            std::cout << "Debug F1" << std::endl;
             if (ev->response_type == 0) {
                 std::cout << "Response type 0" << std::endl;
                 free(ev);
@@ -781,13 +789,10 @@ namespace schrandr {
             free(ev);
         }
         if (crtc_event && screen_event) {
-            std::cout << "Returning MODE_EVENT" << std::endl;
             return MODE_EVENT;
         } else if (!crtc_event && screen_event) {
-            std::cout << "Returning CONNECTION_EVENT" << std::endl;
             return CONNECTION_EVENT;
         } else {
-            std::cout << "Returning OTHER_EVENT" << std::endl;
             return OTHER_EVENT;
         }
     }

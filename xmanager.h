@@ -13,16 +13,17 @@
 #include "monitor_setup.h"
 #include "mode.h"
 #include "defs.h"
+#include "logging.h"
 
 namespace schrandr {
     
     class XManager {
     public:
-        XManager();
+        XManager(std::shared_ptr<Logger> logger);
         ~XManager();
         MonitorSetup get_monitors();
         Mode get_mode();
-        void set_mode(const Mode &current, const Mode &target);
+        bool set_mode(const Mode &current, const Mode &target);
         void print_screen_info();
         schrandr_event_t check_for_events();
         std::vector<xcb_randr_output_t> getConnectedOutputs();
@@ -44,6 +45,7 @@ namespace schrandr {
         xcb_screen_t *screens_;
         int n_screens_;
         int screen_;
+        std::shared_ptr<Logger> logger_;
         
         void get_screens_raw_();
         void get_outputs_raw_();

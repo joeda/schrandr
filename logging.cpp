@@ -1,4 +1,3 @@
-#include <syslog.h>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -14,6 +13,7 @@ namespace schrandr {
 
     Logger::~Logger()
     {
+        log("Closing log and exiting");
         if (syslog_) closelog();
     }
     
@@ -24,7 +24,7 @@ namespace schrandr {
         syslog_ = true;
     }
     
-    void Logger::log(std::string msg) 
+    void Logger::log(const std::string &msg) 
     {
         syslog(LOG_INFO, msg.c_str());
     }
@@ -32,5 +32,15 @@ namespace schrandr {
     void Logger::log(char* msg)
     {
         syslog(LOG_INFO, msg);
+    }
+    
+    void Logger::log(int level, const std::string &msg)
+    {
+        syslog(level, msg.c_str());
+    }
+    
+    void Logger::log(int level, char* msg)
+    {
+        syslog(level, msg);
     }
 }

@@ -8,15 +8,16 @@
 #include <sys/stat.h>
 #include <sys/file.h>                                       // flock
 #include <memory>                                           // unique_ptr
-#include <unistd.h>
 #include <stdarg.h> //va_list
 #include <atomic>                                           // aborting
 #include <vector>
+#include <unistd.h> //fork()
 
 #include <stdlib.h>
 #include <signal.h>                                         // sigaction
 
-#include "schrandr.h"
+#include "pid_file_holder.h"
+#include "cmdline_args.h"
 #include "logging.h"
 #include "xmanager.h"
 #include "mode.h"
@@ -26,39 +27,11 @@
 
 #include <xcb/xcb.h>
 
-#define OCNE(X) ((XRROutputChangeNotifyEvent*)X)
-#define BUFFER_SIZE 128
 
 namespace schrandr {
     
     std::unique_ptr<PIDFileHolder> pid_file_holder;
     std::atomic<int> interruption(0);
-    unsigned int loop_duration(500000);
-    std::atomic<bool> interactive(false);
-    
-    PIDFileHolder::PIDFileHolder(unsigned int pid)
-    : pid_file_(PID_FILE, std::ios_base::in)
-    {
-        if (!pid_file_.fail()) {
-            std::cout << "PID file exists?" << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        pid_file_.close();
-        pid_file_.open(PID_FILE, std::ios_base::out | std::ios_base::trunc);
-        pid_file_.exceptions(pid_file_.badbit | pid_file_.failbit);
-        pid_file_ << pid << std::flush;
-    }
-    
-    
-    PIDFileHolder::~PIDFileHolder()
-    {
-        pid_file_.close();
-        std::cout << "Now Closing" << std::endl;
-        if (unlink(PID_FILE) == -1) {
-            exit(EXIT_FAILURE);
-        }
-        std::cout << "Unlinking worked apparently." << std::endl;
-    }
     
     void sig_handler(int signum)
     {
@@ -78,7 +51,6 @@ namespace schrandr {
                 break;
         }
     }
-    
     
     void handle_uncaught()
     {
@@ -116,12 +88,16 @@ int main(int argc, char **argv)
 {
     using namespace schrandr;
     
+    auto cmdLineOptions = parseCmdlineArgs(argc, argv);
+    if (cmdLineOptions.help) {
+        printHelp(std::cout);
+        exit(EXIT_SUCCESS);
+    }
+    if (cmdLineOptions.version) {
+        printVersion(std::cout);
+        exit(EXIT_SUCCESS);
+    }
     struct sigaction handler;
-    int index;
-    int c;
-    Logger logger;
-    XManager xmanager;
-    
     std::set_terminate(handle_uncaught);
     
     memset(&handler, 0, sizeof(handler));
@@ -136,110 +112,67 @@ int main(int argc, char **argv)
         || sigaction(SIGUSR2, &handler, NULL)
         || sigaction(SIGSEGV, &handler, NULL)) {
         return 1;
-        }
-        
-        opterr = 0;
-    while ((c = getopt (argc, argv, "i")) != -1) {
-        switch (c)
-        {
-            case 'i':
-                interactive = true;
-                break;
-            case '?':
-                if (isprint (optopt))
-                    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-                else
-                    fprintf (stderr,
-                             "Unknown option character `\\x%x'.\n",
-                             optopt);
-                    return 1;
-            default:
-                abort ();
-        }
     }
-    printf("interactive mode? %s\n", interactive ? "true" : "false");
-    for (index = optind; index < argc; index++)
-        printf ("Non-option argument %s\n", argv[index]);
-    
     pid_t pID = 0;
-    if (!interactive) {
+    if (!cmdLineOptions.interactive) {
         pID = fork();
     }
     if (pID == 0)                                           // child
     {
         // Code only executed by child process
         std::cout << "I'm the child process!" << std::endl;
-        
+        unsigned int loop_duration(500000);
+        std::string mainConfDir;
+        auto xdgDir = getenv("XDG_CONFIG_HOME");
+        if (xdgDir) {
+            mainConfDir = std::string(xdgDir);
+        } else {
+            auto homeDir = getenv("HOME");
+            mainConfDir = std::string(homeDir);
+            mainConfDir += "/.config";
+        }
+        mainConfDir += "/schrandr";
+        auto logger = std::make_shared<Logger>();
+        XManager xmanager(logger);
         setsid();
         pid_file_holder.reset(new PIDFileHolder(getpid()));
-        logger.enable_syslog();
-        logger.log("Hello!");
+        logger->enable_syslog();
+        logger->log("Started schrandr");
         
-        std::vector<std::string> sample_data;
-        sample_data.push_back("Bananas");
-        sample_data.push_back("Apples");
-        logger.log(sample_data);
-        
-        Config config;
+        Config config(mainConfDir, "config.json", logger);
         bool something_happened;
         Mode prevMode = xmanager.get_mode();
         Mode currentMode = prevMode;
-        ModeList known_modes;
         auto currentMonitorSetup = xmanager.get_monitors();
-
-        known_modes.addNamedMode(currentMonitorSetup, prevMode, "");
-        //config.print_modelist(known_modes);
         auto connectedOutputs = xmanager.getConnectedOutputs();
-        /* for (const auto &output : connectedOutputs) {
-            std::cout << "Available modes for output " << std::to_string(output)
-                      << ":";
-            for (const auto &mode : xmanager.getAvailableModesFromOutput(output)) {
-                std::cout << " " << std::to_string(mode);
-            }
-            std::cout << std::endl;
-        }
-        std::cout << "Outputs active post-event: " << std::endl;
-        for (const auto &conn : xmanager.getActiveOutputs()) {
-            std::cout << "Active: " << std::to_string(conn)
-                    << std::endl;
-        } */
-        // Apparently, the first mode has always the highest resolution
-        /* 
-        for (const auto &mi : xmanager.getModeInfos()) {
-            std::cout << "Begin Mode info:" << std::endl;
-            std::cout << "  id: " << mi.id << "\n  w: " << mi.width
-                      << "\n  h: " << mi.height << "\n  mode_flags: "
-                      << mi.mode_flags << std::endl;
-        }
-        */
+        config.handleModeChange(currentMonitorSetup, currentMode);
         std::cout << "---MODELIST--- (initially)" << std::endl;
-        config.print_modelist(known_modes);
+        config.print_modelist();
         std::cout << "---MODELIST END--- (initially)\n" << std::endl;
         
         while (true) {
-            std::cout << "Infinite Loop!" << std::endl;
             usleep(loop_duration);
             if (interruption > 0) {
-                config.write_modes(known_modes);
+                //config.write_modes(known_modes);
                 break;
             }
             switch(xmanager.check_for_events()) {
             case MODE_EVENT: {
+                logger->log("Detected mode change, setting as default for current mode");
                 std::cout << "Mode Event" << std::endl;
                 prevMode = currentMode;
                 currentMode = xmanager.get_mode();
                 std::cout << xmanager.get_monitors().print_setup();
-                known_modes.setDefaultMode(
-                    xmanager.get_monitors(), currentMode);
+                config.handleModeChange(xmanager.get_monitors(), currentMode);
                 std::cout << "---MODELIST---" << std::endl;
-                config.print_modelist(known_modes);
+                config.print_modelist();
                 std::cout << "---MODELIST END---\n" << std::endl;
             } break;
             case CONNECTION_EVENT: {
                 std::cout << "Connection Event" << std::endl;
                 prevMode = currentMode;
                 std::cout << "---MODELIST---" << std::endl;
-                config.print_modelist(known_modes);
+                config.print_modelist();
                 std::cout << "---MODELIST END---\n" << std::endl;
                 auto monSetup = xmanager.get_monitors();
                 std::cout << "MonitorSetup after event:" << std::endl;
@@ -247,13 +180,15 @@ int main(int argc, char **argv)
                 auto pastConn = connectedOutputs;
                 connectedOutputs = xmanager.getConnectedOutputs();
                 auto diff = compareConnectedOutputs(pastConn, connectedOutputs);
-                if (known_modes.isMonitorSetupConfigured(monSetup)) {
+                if (config.isMonitorSetupConfigured(monSetup)) {
+                    logger->log("Found existing setup, attempting to restore");
                     std::cout << "Found setup in configured setups" << std::endl;
-                    Mode toSet = known_modes.getAnyMode(monSetup);
+                    Mode toSet = config.getAnyMode(monSetup);
                     std::cout << "Attempting to set mode" << std::endl;
                     xmanager.set_mode(xmanager.get_mode(), toSet);
                 }
                 else {
+                    logger->log("setup not found in configured setups, handling connection events");
                     std::cout << "setup not found in configured setups" << std::endl;
                     for (const auto &conn : diff.second) {
                         std::cout << "disconnected: " << std::to_string(conn)
@@ -285,7 +220,8 @@ int main(int argc, char **argv)
             case OTHER_EVENT:
                 break;
             default:
-                std::cout << "Default. WTF!?" << std::endl;
+                logger->log(LOG_ERR, "Internal Event error");
+                throw std::runtime_error("Event error");
                 break;
             }
         }

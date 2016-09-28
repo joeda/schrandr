@@ -14,6 +14,8 @@ include(FindJSONCpp.cmake)
     
 set(CORE_LIBS
     logging.cpp
+    pid_file_holder.cpp
+    cmdline_args.cpp
     xmanager.cpp
     monitor_setup.cpp
     edid.cpp

@@ -1,6 +1,8 @@
 #ifndef LOGGING_H_
 #define LOGGING_H_
 
+#include <syslog.h>
+
 
 namespace schrandr {
     
@@ -9,8 +11,10 @@ namespace schrandr {
         Logger();
         ~Logger();
         void enable_syslog();
-        void log(std::string msg);
+        void log(const std::string &msg);
         void log(char *msg);
+        void log(int level, const std::string &msg);
+        void log(int level, char* msg);
         
         template<class T>
         void log(std::vector<T> messages)

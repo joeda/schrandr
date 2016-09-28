@@ -4,12 +4,14 @@
 #include <string>
 #include <json/json.h>
 #include <vector>
+#include <memory> //shared_ptr
 
 #include "mode.h"
 #include "jsonadapter.h"
+#include "logging.h"
 
 namespace schrandr {
-        
+            
     class ModeList {
     public:
         typedef std::map<MonitorSetup, std::map<std::string, Mode> > modeListMap_t;
@@ -32,16 +34,25 @@ namespace schrandr {
     
     class Config {
     public:
-        Config();
-        void write_modes(const ModeList &modes);
-        ModeList read_modes();
+        Config(const std::string &configDir,
+               const std::string &confFileName,
+               std::shared_ptr<Logger> logger);
         void print_mode(Mode m);
-        void print_modelist(const ModeList &modes);
+        void print_modelist();
+        void handleModeChange(const MonitorSetup &ms, const Mode &mode);
+        Mode getAnyMode(const MonitorSetup &ms) const;
+        bool isMonitorSetupConfigured(const MonitorSetup &ms) const;
         
     private:
-        std::string config_file_path_;
+        std::string confFileName_;
         std::string empty_setups_path_;
+        std::string configDir_;
         JSONAdapter json_adapter_;
+        ModeList modeList_;
+        std::shared_ptr<Logger> logger_;
+        
+        void writeModes_();
+        void readModes_();
     };
 
 } 

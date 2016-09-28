@@ -8,30 +8,46 @@
 
 namespace schrandr {
     
-    Config::Config():
-        config_file_path_("/tmp/schrandr.conf"),
-        empty_setups_path_("/home/jo/dev/schrandr/empty_setups.json")
-    {}
+    Config::Config(const std::string &configDir,
+                   const std::string &confFileName,
+                   std::shared_ptr<Logger> logger)
+    :
+        configDir_(configDir),
+        confFileName_(confFileName),
+        empty_setups_path_("/home/jo/dev/schrandr/empty_setups.json"),
+        logger_(logger)
+    {
+        readModes_();
+    }
 
-    void Config::write_modes(const ModeList &modes)
+    void Config::writeModes_()
     {
         std::ofstream ofs;
-        ofs.open(config_file_path_, std::ofstream::out | std::ofstream::trunc);
+        ofs.open(configDir_ + std::string("/") + confFileName_,
+                 std::ofstream::out | std::ofstream::trunc);
         std::stringstream ss;
         ss.str(std::string());
-        Json::Value json_modelist = json_adapter_.modesToJson(modes);
+        Json::Value json_modelist = json_adapter_.modesToJson(modeList_);
         json_adapter_.write_to_stream(&ss, json_modelist);
         ofs << ss.rdbuf() << std::flush;
+        ofs.close();
     }
     
-    ModeList Config::read_modes()
+    void Config::readModes_()
     {
-        std::ifstream config_file(config_file_path_);
-        if (!config_file.good())
+        auto filePath = configDir_ + std::string("/") + confFileName_;
+        std::ifstream config_file(filePath);
+        if (!config_file.good()) {
+            logger_->log(LOG_NOTICE, "Config file " + filePath + " not found, "
+                "reverting to " + empty_setups_path_);
+            filePath = empty_setups_path_;
             config_file.open(empty_setups_path_);
+        }
         Json::Value json_modes = json_adapter_.read_stream(&config_file);
         
-        return json_adapter_.modesFromJson(json_modes);
+        modeList_ = json_adapter_.modesFromJson(json_modes);
+        config_file.close();
+        logger_->log(LOG_INFO, "Successfully read " + empty_setups_path_);
     }
     
     void Config::print_mode(Mode m)
@@ -40,10 +56,25 @@ namespace schrandr {
             &std::cout, json_adapter_.mode_to_json(m));
     }
     
-    void Config::print_modelist(const ModeList &modes)
+    void Config::print_modelist()
     {
         json_adapter_.write_to_stream(
-            &std::cout ,json_adapter_.modesToJson(modes));
+            &std::cout ,json_adapter_.modesToJson(modeList_));
+    }
+    void Config::handleModeChange(const MonitorSetup &ms, const Mode &mode)
+    {
+        modeList_.setDefaultMode(ms, mode);
+        writeModes_();
+    }
+    
+    Mode Config::getAnyMode(const MonitorSetup &ms) const
+    {
+        return modeList_.getAnyMode(ms);
+    }
+    
+    bool Config::isMonitorSetupConfigured(const MonitorSetup &ms) const
+    {
+        return modeList_.isMonitorSetupConfigured(ms);
     }
     
     ModeList::ModeList(const ModeList::modeListMap_t &list) {
