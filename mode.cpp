@@ -3,6 +3,7 @@
 
 #include "mode.h"
 #include "monitor_setup.h"
+#include "edid.h"
 
 namespace schrandr {
     

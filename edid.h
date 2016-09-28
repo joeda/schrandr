@@ -29,7 +29,7 @@ namespace schrandr {
     
     inline bool operator==(const Edid& lhs, const Edid& rhs)
     {
-        return lhs.to_string().compare(rhs.to_string());
+        return lhs.to_string().compare(rhs.to_string()) == 0;
     };
     
     inline bool operator<(const Edid& lhs, const Edid& rhs)

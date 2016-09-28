@@ -53,6 +53,12 @@ namespace schrandr {
         auto changeMap = makeCrtcDiff_(current,
                                        target,
                                        allCrtcsByEdid);
+        std::cout << "ChangeMap:" << std::endl;
+        for (const auto &pair : changeMap) {
+            std::cout << "Info for CRTC " << pair.first << ":\n"
+                      << "Pre:\n" << pair.second.first << "\nPost:\n"
+                      << pair.second.second << std::endl;
+        }
         std::cout << "Debug A4" << std::endl;
         for (auto &pair : changeMap) {
             bool handled = false;
@@ -97,8 +103,8 @@ namespace schrandr {
             targetCrtcs.insert(targetCrtcs.end(), crtcs.begin(), crtcs.end());
         }
         std::cout << "Debug A7" << std::endl;
-        for (const auto &targetCrtc : targetCrtcs) {
-            auto possibleCrtcs = getPossibleRawCrtcs_(targetCrtc, allCrtcsByEdid);
+        for (auto it = targetCrtcs.begin(); it != targetCrtcs.end(); ) {
+            auto possibleCrtcs = getPossibleRawCrtcs_(*it, allCrtcsByEdid);
             for (const auto &taken : crtcsTaken) {
                 possibleCrtcs.erase(std::remove(possibleCrtcs.begin(),
                                                 possibleCrtcs.end(),
@@ -107,34 +113,70 @@ namespace schrandr {
             }
             bool matched = false;
             for (const auto &possibleCrtc : possibleCrtcs) {
+                if (matched) {
+                    break;
+                }
                 for (const auto &curCrtc : curCrtcs) {
                     if ((curCrtc.crtc == possibleCrtc) && 
-                        curCrtc.hasSameEdids(targetCrtc)) {
-                            result[possibleCrtc] = std::make_pair(curCrtc, targetCrtc);
+                        curCrtc.hasSameEdids(*it)) {
+                            result[possibleCrtc] = std::make_pair(curCrtc, *it);
                             matched = true;
                             crtcsTaken.push_back(possibleCrtc);
+                            break;
                         }
                 }
             }
             if (matched) {
-                continue;
+                it = targetCrtcs.erase(it);
+            } else {
+                ++it;
             }
+        }
+        for (auto it = targetCrtcs.begin(); it != targetCrtcs.end(); ) {
+            auto possibleCrtcs = getPossibleRawCrtcs_(*it, allCrtcsByEdid);
+            for (const auto &taken : crtcsTaken) {
+                possibleCrtcs.erase(std::remove(possibleCrtcs.begin(),
+                                                possibleCrtcs.end(),
+                                                taken),
+                                    possibleCrtcs.end());
+            }
+            bool matched = false;
             for (const auto &possibleCrtc : possibleCrtcs) {
+                if (matched) {
+                    break;
+                }
                 for (const auto &curCrtc : curCrtcs) {
                     if (curCrtc.crtc == possibleCrtc) {
-                            result[possibleCrtc] = std::make_pair(curCrtc, targetCrtc);
+                            result[possibleCrtc] = std::make_pair(curCrtc, *it);
                             matched = true;
+                            crtcsTaken.push_back(possibleCrtc);
+                            break;
                         }
                 }
             }
             if (matched) {
-                continue;
+                it = targetCrtcs.erase(it);
+            } else {
+                ++it;
             }
+        }
+        for (auto it = targetCrtcs.begin(); it != targetCrtcs.end(); ) {
+            auto possibleCrtcs = getPossibleRawCrtcs_(*it, allCrtcsByEdid);
+            for (const auto &taken : crtcsTaken) {
+                possibleCrtcs.erase(std::remove(possibleCrtcs.begin(),
+                                                possibleCrtcs.end(),
+                                                taken),
+                                    possibleCrtcs.end());
+            }
+            bool matched = false;
             if (!possibleCrtcs.empty()) {
                 CRTC empty;
-                result[possibleCrtcs.front()] = std::make_pair(empty, targetCrtc);
-                matched = true; 
+                result[possibleCrtcs.front()] = std::make_pair(empty, *it);
+                matched = true;
+                crtcsTaken.push_back(possibleCrtcs.front());
+                it = targetCrtcs.erase(it);
             } else {
+                ++it;
                 std::cout << "Warning: Could not match CRTC!" << std::endl;
             }
         }

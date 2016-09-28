@@ -1,5 +1,6 @@
-cmake_minimum_required (VERSION 3.1.0)
+cmake_minimum_required (VERSION 2.6)
 project (schrandr CXX)
+option(BUILD_TESTS "Build test programs" OFF)
 
 include(FindXCB_KDE.cmake)
     if(NOT XCB_FOUND)
@@ -11,17 +12,31 @@ include(FindJSONCpp.cmake)
         message(FATAL_ERROR "Failed to find JSONCPP")
     endif(NOT JSONCPP_FOUND)
     
-set(CORE_LIBS logging xmanager monitor_setup edid config jsonadapter mode mode_change)
+set(CORE_LIBS
+    logging.cpp
+    xmanager.cpp
+    monitor_setup.cpp
+    edid.cpp
+    config.cpp
+    jsonadapter.cpp
+    mode.cpp
+    mode_change.cpp)
 set(EXT_LIBS ${XCB_LIBRARIES} ${JSONCPP_LIBRARIES})
 
-foreach(LIB ${CORE_LIBS})
-    add_library(${LIB} "${LIB}.cpp")
-endforeach(LIB)
+include_directories(${PROJECT_BINARY_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+
+add_library(SchrandrLibs ${CORE_LIBS})
 
 add_executable(schrandr schrandr.cpp)
 
+set_property(TARGET schrandr SchrandrLibs PROPERTY CXX_STANDARD 11)
+set_property(TARGET schrandr SchrandrLibs PROPERTY CXX_STANDARD_REQUIRED ON)
 
-set_property(TARGET schrandr ${CORE_LIBS} PROPERTY CXX_STANDARD 11)
-set_property(TARGET schrandr ${CORE_LIBS} PROPERTY CXX_STANDARD_REQUIRED ON)
+target_link_libraries(schrandr SchrandrLibs ${EXT_LIBS})
 
-target_link_libraries(schrandr ${CORE_LIBS} ${EXT_LIBS})
+if(BUILD_TESTS)
+    enable_testing()
+    find_package(GTest REQUIRED)
+    include_directories(${GTEST_INCLUDE_DIRS})
+    add_subdirectory(tests)
+endif(BUILD_TESTS)
