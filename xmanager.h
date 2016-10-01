@@ -63,12 +63,21 @@ namespace schrandr {
             const xcb_randr_output_t &output, xcb_randr_crtc_t *crtc);
         int error_handler_(void);
         bool sendCrtcConfig_(
+        const xcb_randr_crtc_t &crtc,
+        const xcb_randr_mode_t &mode,
+        const xcb_randr_rotation_t &rotation,
+        int16_t x,
+        int16_t y,
+        xcb_randr_output_t *outputs,
+        int nOutputs);
+        bool sendCrtcConfig_(
             const xcb_randr_crtc_t &crtc,
             const xcb_randr_mode_t &mode,
             const xcb_randr_rotation_t &rotation,
             int16_t x,
             int16_t y,
             const std::vector<xcb_randr_output_t> &outputs);
+        bool sendCrtcConfig_(const CRTC &crtc);
         //bool has_randr_15_(Display *dpy_);
     };
 } 

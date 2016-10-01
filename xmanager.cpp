@@ -645,69 +645,43 @@ namespace schrandr {
         auto modeCrtc = lastConnected.getCrtcByOutput(output);
         std::cout << "disableOutput: CRTC " << std::to_string(modeCrtc.crtc)
                   << " for output " << std::to_string(output) << std::endl;
-        auto cookie = xcb_randr_set_crtc_config(
-            xcb_connection_,
-            modeCrtc.crtc,
-            XCB_CURRENT_TIME,
-            XCB_CURRENT_TIME,
-            1, //x
-            1, //y
-            0, //Mode 
-            XCB_RANDR_ROTATION_ROTATE_0, //rotation
-            0, //outputs_len
-            nullptr); //ptr to outputs
-        auto reply = xcb_randr_set_crtc_config_reply(
-            xcb_connection_, cookie, nullptr);
-        std::cout << "disableOutpt response: " << std::to_string(reply->response_type)
-                  << std::endl;
-        //std::cout << "disableOutpt status: " << std::to_string(reply->status)
-         //         << std::endl;
-        //set_mode(modePre);  //fails for some reason
-        return true;
+        std::vector<xcb_randr_output_t> outputs;
+        for (const auto &op : modeCrtc.outputs) {
+            outputs.push_back(op.output);
+        }
+        auto it = std::find(outputs.begin(), outputs.end(), output);
+        if (it != outputs.end()) {
+            outputs.erase(it);
+            if (outputs.empty()){
+                return disableCrtc(modeCrtc);
+            } else {
+                return sendCrtcConfig_(
+                    modeCrtc.crtc,
+                    modeCrtc.mode,
+                    XCB_RANDR_ROTATION_ROTATE_0,
+                    modeCrtc.x,
+                    modeCrtc.y,
+                    outputs);
+            }
+        } else {
+            logger_->log("FIXME");
+            return false;
+        }
     }
     
     bool XManager::disableCrtc(const CRTC &crtc) {
-        auto cookie = xcb_randr_set_crtc_config(
-            xcb_connection_,
-            crtc.crtc,
-            XCB_CURRENT_TIME,
-            XCB_CURRENT_TIME,
-            0, //x
-            0, //y
-            0, //Mode 
-            XCB_RANDR_ROTATION_ROTATE_0, //rotation
-            0, //outputs_len
-            nullptr); //ptr to outputs
-        auto reply = xcb_randr_set_crtc_config_reply(
-            xcb_connection_, cookie, nullptr);
-        std::cout << "disableCrtc response: " << std::to_string(reply->response_type)
-                  << std::endl;
-        //std::cout << "disableOutpt status: " << std::to_string(reply->status)
-         //         << std::endl;
-        //set_mode(modePre);  //fails for some reason
-        return true;
+        return disableCrtc(crtc.crtc);
     }
     
     bool XManager::disableCrtc(const xcb_randr_crtc_t &crtc) {
-        auto cookie = xcb_randr_set_crtc_config(
-            xcb_connection_,
+        return sendCrtcConfig_(
             crtc,
-            XCB_CURRENT_TIME,
-            XCB_CURRENT_TIME,
+            0, //Mode
+            XCB_RANDR_ROTATION_ROTATE_0,
             0, //x
             0, //y
-            0, //Mode 
-            XCB_RANDR_ROTATION_ROTATE_0, //rotation
-            0, //outputs_len
-            nullptr); //ptr to outputs
-        auto reply = xcb_randr_set_crtc_config_reply(
-            xcb_connection_, cookie, nullptr);
-        std::cout << "disableCrtc response: " << std::to_string(reply->response_type)
-                  << std::endl;
-        //std::cout << "disableOutpt status: " << std::to_string(reply->status)
-         //         << std::endl;
-        //set_mode(modePre);  //fails for some reason
-        return true;
+            nullptr,
+            0); //nOutputs
     }
     
     bool XManager::activateAnyOutput()
@@ -728,26 +702,13 @@ namespace schrandr {
             if (nPossibleOutputs > 0) {
                 auto outputs = xcb_randr_get_crtc_info_possible (reply);
                 auto modes = getAvailableModesFromOutput(outputs[0]);
-                auto setCookie = xcb_randr_set_crtc_config(
-                    xcb_connection_,
-                    crtcs[i],
-                    XCB_CURRENT_TIME,
-                    XCB_CURRENT_TIME,
-                    0, //x
-                    0, //y
-                    modes.front(), //Mode 
-                    XCB_RANDR_ROTATION_ROTATE_0, //rotation
-                    1, //outputs_len
-                    outputs); //ptr to outputs
-                auto setReply = xcb_randr_set_crtc_config_reply(
-                    xcb_connection_, setCookie, nullptr);
-                std::cout << "activateAny response: " << std::to_string(reply->response_type)
-                        << std::endl;
-                //std::cout << "activateAny status: " << std::to_string(reply->status)
-                //        << std::endl;
-                if (reply->response_type == 1) {
-                    return true;
-                }
+                return sendCrtcConfig_(crtcs[i],
+                                modes.front(),
+                                XCB_RANDR_ROTATION_ROTATE_0,
+                                0,
+                                0,
+                                outputs,
+                                1);
             }
         }
         return false;
@@ -759,10 +720,9 @@ namespace schrandr {
         const xcb_randr_rotation_t &rotation,
         int16_t x,
         int16_t y,
-        const std::vector<xcb_randr_output_t> &outputs)
+        xcb_randr_output_t *outputs,
+        int nOutputs)
     {
-        xcb_randr_output_t outputArray[outputs.size()];
-        std::copy(outputs.begin(), outputs.end(), outputArray);
         std::ostringstream os;
         os << "XCB Call:" << std::endl;
         os << "\tCRTC: " << crtc
@@ -770,8 +730,8 @@ namespace schrandr {
             << "\n\ty: " << y
             << "\n\tmode: " << mode
             << "\n\toutputs:";
-        for (const auto &op : outputs) {
-            os << op << " ";
+        for (int i = 0; i < nOutputs; ++i) {
+            os << outputs[i] << " ";
         }
         os << std::endl;
         logger_->log(std::string("Attempting XCB Call\n") + os.str());
@@ -784,8 +744,8 @@ namespace schrandr {
             y, //y
             mode, //Mode 
             rotation, //rotation
-            outputs.size(), //outputs_len
-            outputArray); //ptr to outputs
+            nOutputs, //outputs_len
+            outputs); //ptr to outputs
         auto setReply = xcb_randr_set_crtc_config_reply(
             xcb_connection_, setCookie, nullptr);
         std::cout << "activateAny response: " << std::to_string(setReply->response_type)
@@ -797,6 +757,42 @@ namespace schrandr {
         } else {
             return false;
         }
+    }
+    
+    bool XManager::sendCrtcConfig_(
+        const xcb_randr_crtc_t &crtc,
+        const xcb_randr_mode_t &mode,
+        const xcb_randr_rotation_t &rotation,
+        int16_t x,
+        int16_t y,
+        const std::vector<xcb_randr_output_t> &outputs)
+    {
+        xcb_randr_output_t outputArray[outputs.size()];
+        std::copy(outputs.begin(), outputs.end(), outputArray);
+        return sendCrtcConfig_(
+            crtc,
+            mode,
+            rotation,
+            x,
+            y,
+            outputArray,
+            outputs.size()
+        );
+    }
+    
+    bool XManager::sendCrtcConfig_(const CRTC &crtc)
+    {
+        std::vector<xcb_randr_output_t> outputs;
+        for (const auto &op : crtc.outputs) {
+            outputs.push_back(op.output);
+        }
+        return sendCrtcConfig_(
+            crtc.crtc,
+            crtc.mode,
+            XCB_RANDR_ROTATION_ROTATE_0,
+            crtc.x,
+            crtc.y,
+            outputs);
     }
     
     schrandr_event_t XManager::check_for_events()
