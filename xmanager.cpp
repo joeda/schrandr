@@ -753,6 +753,52 @@ namespace schrandr {
         return false;
     }
     
+    bool XManager::sendCrtcConfig_(
+        const xcb_randr_crtc_t &crtc,
+        const xcb_randr_mode_t &mode,
+        const xcb_randr_rotation_t &rotation,
+        int16_t x,
+        int16_t y,
+        const std::vector<xcb_randr_output_t> &outputs)
+    {
+        xcb_randr_output_t outputArray[outputs.size()];
+        std::copy(outputs.begin(), outputs.end(), outputArray);
+        std::ostringstream os;
+        os << "XCB Call:" << std::endl;
+        os << "\tCRTC: " << crtc
+            << "\n\tx: " << x
+            << "\n\ty: " << y
+            << "\n\tmode: " << mode
+            << "\n\toutputs:";
+        for (const auto &op : outputs) {
+            os << op << " ";
+        }
+        os << std::endl;
+        logger_->log(std::string("Attempting XCB Call\n") + os.str());
+        auto setCookie = xcb_randr_set_crtc_config(
+            xcb_connection_,
+            crtc,
+            XCB_CURRENT_TIME,
+            XCB_CURRENT_TIME,
+            x, //x
+            y, //y
+            mode, //Mode 
+            rotation, //rotation
+            outputs.size(), //outputs_len
+            outputArray); //ptr to outputs
+        auto setReply = xcb_randr_set_crtc_config_reply(
+            xcb_connection_, setCookie, nullptr);
+        std::cout << "activateAny response: " << std::to_string(setReply->response_type)
+                << std::endl;
+        //std::cout << "activateAny status: " << std::to_string(reply->status)
+        //        << std::endl;
+        if (setReply->response_type == 1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
     schrandr_event_t XManager::check_for_events()
     {
         bool crtc_event = false;
